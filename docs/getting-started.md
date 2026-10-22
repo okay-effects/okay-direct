@@ -7,10 +7,9 @@ which implementation to run on.
 2. [The dependency](#the-dependency)
 3. [Choosing an implementation](#choosing-an-implementation)
 4. [A first program: Java](#a-first-program-java)
-5. [Your own effect](#your-own-effect)
-6. [A first program: Scala](#a-first-program-scala)
-7. [Running on Espresso: multi-shot](#running-on-espresso-multi-shot)
-8. [Where to go next](#where-to-go-next)
+5. [A first program: Scala](#a-first-program-scala)
+6. [Running on Espresso: multi-shot](#running-on-espresso-multi-shot)
+7. [Where to go next](#where-to-go-next)
 
 ## What you need
 
@@ -120,75 +119,90 @@ sbt: `fork := true` and `javaOptions ++= Seq(...)` with the same three. Your cod
 
 ## A first program: Java
 
-A program asks a `Reader` for a base, counts in a `State`, and fails on a negative base — three effects, each a
-capability it is given:
+A shop's cart: an effect of our own, prices; a program totalling the cart; two handlers that give prices their
+meaning; and the `Fail` of the standard effects for an item with no price. It is checked against the release 0.1.0.
+
+**The effect and the program.** An effect is a sealed interface, its operations records implementing it and
+`Effect.Op<Effect, Answer>`. The program takes the capabilities it needs:
 
 ```java
-import okay.direct.Effect;
-import okay.direct.Effects;
-import okay.direct.loom.LoomEffects;
-import okay.direct.std.Fail;
-import okay.direct.std.Reader;
-import okay.direct.std.State;
+// the effect: one operation, as data — Price(item) is answered by an Integer
+sealed interface Prices {
+    record Price(String item) implements Prices, Op<Prices, Integer> {}
+}
 
-public class Hello {
-    static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state, Effect<Fail<String>> fail) {
-        int base = Reader.ask(reader);
-        State.put(state, State.get(state) + 1);
-        return base < 0 ? Fail.raise(fail, "negative: " + base) : base * 2;
-    }
-
-    public static void main(String[] args) {
-        Effects fx = new LoomEffects();
-        var result = Reader.run(fx, 21, reader ->
-            State.run(fx, 0, state ->
-                Fail.<String, Integer, RuntimeException>attempt(fx, fail -> program(reader, state, fail))));
-        System.out.println(result);   // Final[state=1, value=Success[value=42]]
-    }
+// the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
+static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
+    return cart.stream()
+        .mapToInt(item -> {
+            int price = prices.perform(new Prices.Price(item));
+            return price >= 0 ? price : Fail.raise(fail, "no price for " + item);
+        })
+        .sum();
 }
 ```
 
-`program` is ordinary Java: it calls methods, and could call them in lambdas, in streams, in other functions. Each
-`run`/`attempt` is a handler; the body it runs gets the handler's capability. Change `21` to `-1` and the result is
-`Final[state=1, value=Failure[error=negative: -1]]`; change `new LoomEffects()` to `new ThreadEffects()` and it runs
-without the flags.
-
-## Your own effect
-
-An effect is a sealed interface, its operations records implementing it and `Effect.Op<Effect, Answer>`; a handler is
-an exhaustive `switch` answering through `k`, the operation the witness of its answer's type:
+**The handlers**, written apart. A handler is an exhaustive `switch` answering through `k`, the operation the witness
+of its answer's type; a `TailHandler` answers in place. An interceptor is a handler standing on top of a capability:
 
 ```java
-import okay.direct.Answer;
-import okay.direct.Effect;
-import okay.direct.Effect.Op;
-import okay.direct.TailHandler;
-
-sealed interface Console {
-    record Print(String line) implements Console, Op<Console, Void> {}
-    record Read() implements Console, Op<Console, String> {}
-}
-
-static void print(Effect<Console> console, String line) { console.perform(new Console.Print(line)); }
-static String read(Effect<Console> console) { return console.perform(new Console.Read()); }
-
-// the real console
-String name = fx.handle(new TailHandler<Console, String, String>() {
-    public String value(String value) { return value; }
-    public void operation(Console op, Answer<Console> k) {
-        switch (op) {
-            case Console.Print print -> { System.out.println(print.line()); k.answer(print, null); }
-            case Console.Read read -> k.answer(read, System.console().readLine());
+// a handler: what Price means — answered from a price list, -1 for an item not in it
+static <A> A priceList(Effects fx, Map<String, Integer> list, Body<Prices, A, RuntimeException> body) {
+    return fx.handle(new TailHandler<Prices, A, A>() {
+        public A value(A result) { return result; }
+        public void operation(Prices op, Answer<Prices> k) {
+            switch (op) {
+                case Prices.Price p -> k.answer(p, list.getOrDefault(p.item(), -1));
+            }
         }
-    }
-}, console -> {
-    print(console, "your name?");
-    return read(console);
-});
+    }, body);
+}
+
+// another, on top of it: a sale — each price asked of the one further out, 10% off, told to a trail
+static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
+    return Interceptor.intercept(prices, (op, pass, k) -> {
+        switch (op) {
+            case Prices.Price p -> {
+                int full = pass.pass(p);
+                int discounted = full * 9 / 10;
+                Trail.record(trail, p.item() + ": " + full + " -> " + discounted);
+                k.answer(p, discounted);
+            }
+        }
+    });
+}
 ```
 
-The same program runs under another handler — one answering `Read` from a list, recording `Print`s — for a test. A
-handler that resumes the rest, or does not, or wraps what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).
+**Running it**, on `fx = new LoomEffects()` (or `new ThreadEffects()`, with no flags):
+
+```java
+var list = Map.of("tea", 30, "cake", 50, "jam", 20);
+
+Fail.attempt(fx, fail -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+// Success[value=100]
+
+Fail.attempt(fx, fail -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+// Failure[error=no price for coffee] — and cake is never priced
+
+Trail.keep(fx, trail -> Fail.attempt(fx, fail ->
+    priceList(fx, list, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
+// Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
+```
+
+What is unusual here:
+
+- **An effect inside a stream's lambda.** In monadic style `mapToInt` cannot wait for a monad: it would be rewritten
+  with `traverse` and `flatMap`. Here the stack from `perform` up to its handler is suspended, whatever is between.
+- **An early exit from the middle of a stream.** At `coffee`, `Fail`'s handler does not resume the rest: it unwinds,
+  the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Failure`.
+- **The meaning changes, the program does not.** `total` is the same; the prices come from a list, from a sale on top of
+  it with a trail, from a database, from a test — whichever handler is installed.
+- **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
+  a handler of prices there is no capability to call it with: it does not compile.
+
+The imports: `okay.direct.{Answer, Body, Effect, Effect.Op, Effects, Interceptor, TailHandler}`,
+`okay.direct.loom.LoomEffects`, `okay.direct.std.{Fail, Trail}`. A handler that resumes the rest, or does not, or wraps
+what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).
 
 ## A first program: Scala
 

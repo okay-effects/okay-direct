@@ -60,18 +60,76 @@ public void operation(State<S> op, Answer<State<S>> k) {
 }
 ```
 
-A program takes the capabilities it needs, and calls ordinary methods, in lambdas and across functions; what its
-body throws, `handle` throws:
+A program takes the capabilities it needs and calls ordinary methods — in lambdas, in streams, across functions;
+its handlers are written apart, and change what it means without changing it:
 
 ```java
-static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state, Effect<Fail<String>> fail) {
-    int base = Reader.ask(reader);
-    State.put(state, State.get(state) + 1);
-    return base < 0 ? Fail.raise(fail, "negative") : base;
+// the effect: one operation, as data — Price(item) is answered by an Integer
+sealed interface Prices {
+    record Price(String item) implements Prices, Op<Prices, Integer> {}
 }
 
-Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.attempt(fx, fail -> program(reader, state, fail))));
+// the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
+static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
+    return cart.stream()
+        .mapToInt(item -> {
+            int price = prices.perform(new Prices.Price(item));
+            return price >= 0 ? price : Fail.raise(fail, "no price for " + item);
+        })
+        .sum();
+}
 ```
+
+```java
+// a handler: what Price means — answered from a price list, -1 for an item not in it
+static <A> A priceList(Effects fx, Map<String, Integer> list, Body<Prices, A, RuntimeException> body) {
+    return fx.handle(new TailHandler<Prices, A, A>() {
+        public A value(A result) { return result; }
+        public void operation(Prices op, Answer<Prices> k) {
+            switch (op) {
+                case Prices.Price p -> k.answer(p, list.getOrDefault(p.item(), -1));
+            }
+        }
+    }, body);
+}
+
+// another, on top of it: a sale — each price asked of the one further out, 10% off, told to a trail
+static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
+    return Interceptor.intercept(prices, (op, pass, k) -> {
+        switch (op) {
+            case Prices.Price p -> {
+                int full = pass.pass(p);
+                int discounted = full * 9 / 10;
+                Trail.record(trail, p.item() + ": " + full + " -> " + discounted);
+                k.answer(p, discounted);
+            }
+        }
+    });
+}
+```
+
+```java
+var list = Map.of("tea", 30, "cake", 50, "jam", 20);
+
+Fail.attempt(fx, fail -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+// Success[value=100]
+
+Fail.attempt(fx, fail -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+// Failure[error=no price for coffee] — and cake is never priced
+
+Trail.keep(fx, trail -> Fail.attempt(fx, fail ->
+    priceList(fx, list, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
+// Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
+```
+
+- **An effect inside a stream's lambda.** In monadic style `mapToInt` cannot wait for a monad: it would be rewritten
+  with `traverse` and `flatMap`. Here the stack from `perform` up to its handler is suspended, whatever is between.
+- **An early exit from the middle of a stream.** At `coffee`, `Fail`'s handler does not resume the rest: it unwinds,
+  the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Failure`.
+- **The meaning changes, the program does not.** `total` is the same; the prices come from a list, from a sale on top of
+  it with a trail, from a database, from a test — whichever handler is installed.
+- **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
+  a handler of prices there is no capability to call it with: it does not compile.
 
 Or with the capabilities implicit, found by key wherever the body calls:
 
