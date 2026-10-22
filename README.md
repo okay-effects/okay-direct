@@ -38,6 +38,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), and
 | `Effects` | an implementation: `handle(handler, body) throws E`, for one-shot handlers |
 | `MultiEffects` | an implementation with multi-shot continuations: `MultiHandler`s too |
 | `Abandoned` | thrown at `perform` when the handler drops the rest: the body unwinds, `finally` runs |
+| `Later<F>`, `DetachedHandler`, `DetachedEffects` | a continuation that outlives its clause: resumed once, any time, from any thread; `start` gives a `CompletableFuture` |
 | `Implicit<F>` | a key, by `ScopedValue`, under which a capability is found instead of passed |
 | `Interceptor<C, F>` | control of one effect's operations at the `perform`: tell, pass on, change, refuse |
 | `Audited<C>`, `Audit` | sensitive effects: performed only under an audit, answered only by their own handler |
@@ -174,7 +175,9 @@ Optional<Integer> sum = Reflection.reify(fx, Optional::of,
     (Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));
 ```
 
-`Emits.stream(fx, out -> ...)` is a generator: plain loops enumerate, `Emits.emit` gives values out, the result a lazy
+`Async.await(async, future)` awaits a future in direct style with no thread waiting: on a `DetachedEffects` the
+rest is resumed by the future's callback. `Emits.stream(fx, out -> ...)` is a generator, PULLED on a
+`DetachedEffects` (no thread of its own): plain loops enumerate, `Emits.emit` gives values out, the result a lazy
 `Stream` — one-shot, so on any JDK. `Reflection.stream(fx, p -> ...)` and `Reflection.each(p, stream)` reflect Java's
 streams instead, multi-shot: the bind is
 eager, the rest resumed for each element while the clause runs, as `Stream.flatMap` would resume it only when the

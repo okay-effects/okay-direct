@@ -1,20 +1,28 @@
 package okay.direct.threads;
 
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import okay.direct.Abandoned;
 import okay.direct.Answer;
 import okay.direct.Body;
+import okay.direct.DetachedEffects;
+import okay.direct.DetachedHandler;
 import okay.direct.Effect;
-import okay.direct.Effects;
 import okay.direct.Handler;
+import okay.direct.Later;
 import okay.direct.Resume;
 import okay.direct.TailHandler;
 
 /**
  * ON THREADS: the body runs on a virtual thread of its own, and {@code perform} hands the operation to the
- * handler's thread and waits for the answer. One-shot. Portable: no flags, no internal API.
+ * handler's thread and waits for the answer. One-shot. Portable: no flags, no internal API. Its continuations can
+ * be DETACHED (a {@link DetachedEffects}): whoever resumes one hands the answer over and waits for the body's next
+ * operation, or its end.
  */
-public final class ThreadEffects implements Effects {
+public final class ThreadEffects implements DetachedEffects {
     @Override
     public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E {
         return new Run<F, A, E>(body).handle(handler);
@@ -26,8 +34,24 @@ public final class ThreadEffects implements Effects {
     }
 
     @Override
+    public <F, A, R, E extends Exception> CompletableFuture<R> start(DetachedHandler<F, A, R> handler, Body<F, A, E> body) {
+        var result = new CompletableFuture<R>();
+        new Run<F, A, E>(body).detached(handler, result);
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "ThreadEffects";
+    }
+
+    /** An answer that is a failure, to be thrown at the perform. */
+    private record Raised(Throwable failure) {}
+
+    static RuntimeException thrown(Throwable failure) {
+        if (failure instanceof RuntimeException e) return e;
+        if (failure instanceof Error e) throw e;
+        return new CompletionException(failure);
     }
 
     /** What the body hands its handler: an operation and where to answer it, or that it has ended. */
@@ -71,6 +95,7 @@ public final class ThreadEffects implements Effects {
             put(handler, new Performed(op, reply));
             var r = take(reply);
             if (r.abandoned()) throw new Abandoned(this);
+            if (r.answer() instanceof Raised raised) throw thrown(raised.failure());
             return (X) r.answer();
         }
 
@@ -141,6 +166,71 @@ public final class ThreadEffects implements Effects {
             put(p.reply(), new Reply(null, true));
             while (!(take(handler) instanceof Ended)) {
                 // a perform of this handler while unwinding throws before it is handed over: none comes
+            }
+        }
+
+        /** The body's next operation waited for, here: the clause given a detached rest; or its end, the future's. */
+        <R> void detached(DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+            Performed p;
+            try {
+                p = next();
+            } catch (Throwable t) {
+                result.completeExceptionally(t);
+                return;
+            }
+            if (p == null) {
+                try {
+                    result.complete(handler.value(value));
+                } catch (Throwable t) {
+                    result.completeExceptionally(t);
+                }
+                return;
+            }
+            var k = new Detached<R>(p, handler, result);
+            try {
+                handler.operation(operation(p), k);
+            } catch (Throwable t) {
+                if (k.take()) abandon(p);
+                result.completeExceptionally(t);
+            }
+        }
+
+        private final class Detached<R> implements Later<F> {
+            private final Performed performed;
+            private final DetachedHandler<F, A, R> handler;
+            private final CompletableFuture<R> result;
+            private final AtomicBoolean taken = new AtomicBoolean();
+
+            Detached(Performed performed, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+                this.performed = performed;
+                this.handler = handler;
+                this.result = result;
+            }
+
+            boolean take() {
+                return taken.compareAndSet(false, true);
+            }
+
+            @Override
+            public <X> void answer(Op<F, X> op, X value) {
+                if (op != performed.op()) throw new IllegalArgumentException("resumed with " + op + ", not with " + performed.op());
+                if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
+                put(performed.reply(), new Reply(value, false));
+                detached(handler, result);
+            }
+
+            @Override
+            public void raise(Throwable failure) {
+                if (!take()) throw new IllegalStateException("one-shot: " + performed.op() + " resumed twice");
+                put(performed.reply(), new Reply(new Raised(failure), false));
+                detached(handler, result);
+            }
+
+            @Override
+            public void drop() {
+                if (!take()) throw new IllegalStateException("one-shot: " + performed.op() + " resumed twice");
+                abandon(performed);
+                result.completeExceptionally(new CancellationException("the rest dropped by its handler"));
             }
         }
 

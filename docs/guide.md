@@ -14,9 +14,10 @@ Everything here is in `okay.direct` (the API, module `api`) and `okay.direct.std
 8. [Implicit capabilities](#implicit-capabilities)
 9. [Control and audit](#control-and-audit)
 10. [Generators: streams on any JDK](#generators-streams-on-any-jdk)
-11. [Delimited continuations](#delimited-continuations)
-12. [Monadic reflection](#monadic-reflection)
-13. [The contract](#the-contract)
+11. [Detached continuations: asynchrony without waiting](#detached-continuations-asynchrony-without-waiting)
+12. [Delimited continuations](#delimited-continuations)
+13. [Monadic reflection](#monadic-reflection)
+14. [The contract](#the-contract)
 
 ## Effects and operations
 
@@ -176,6 +177,7 @@ propagate out of `handle` as they are.
 | `Choose` | `flip` | `Choose.all(multiFx, body)`: every way, multi-shot |
 | `Trail` | `record(line)` | `Trail.keep(fx, body)`: the lines and the value, `Trail.Kept` |
 | `Emits<A>` | `emit(value)` | `Emits.collect(fx, body)`: a list; `Emits.stream(fx, body)`: a lazy `Stream` |
+| `Async` | `await(future)` | `Async.run(detachedFx, body)`: a `CompletableFuture`, no thread waiting |
 
 plus `Delimited` and `Reflection`, below.
 
@@ -299,6 +301,40 @@ Stream<List<Integer>> triples = Emits.stream(fx, out -> {
 The other way to the same triples is [monadic reflection of streams](#monadic-reflection): there `each` forks the
 rest of the body for every element, which needs multi-shot continuations, so Espresso. A generator needs neither.
 
+## Detached continuations: asynchrony without waiting
+
+A `Resume` lives while its clause runs. A DETACHED continuation, a `Later<F>`, outlives it: the clause of a
+`DetachedHandler` gets it and returns at once, and anyone resumes it later — a future's callback, another thread, a
+consumer pulling a stream — exactly once:
+
+| | |
+|---|---|
+| `k.answer(op, x)` | the rest resumed with `x`, ON THE RESUMING THREAD, up to its next operation of this handler or its end |
+| `k.raise(t)` | the rest resumed by a failure, thrown at its `perform` |
+| `k.drop()` | the rest dropped: it unwinds, `finally` runs, the future is cancelled |
+
+`DetachedEffects.start(handler, body)` runs the body at once up to its first operation, and returns a
+`CompletableFuture` of the handler's value. As with shots, it is a type: `LoomEffects` and `ThreadEffects` are
+`DetachedEffects`; Espresso, whose continuations are single-threaded, is not.
+
+**`std.Async`** awaits a future in direct style with no thread waiting: its handler resumes the rest from the
+future's callback, and the body goes on on the thread that completed the future.
+
+```java
+CompletableFuture<Integer> total = Async.run(fx, async ->
+    Async.await(async, service.quote("tea")) + Async.await(async, service.quote("cake")));
+```
+
+A failed future is thrown at its `await`. In the shop's handler `Async.await(async, service.quote(item))` takes the
+place of `service.quote(item).join()`: the program is the same, and now no thread waits for the service.
+
+**`Emits.stream` on a `DetachedEffects`** is PULLED: each value taken resumes the generator's detached rest up to its
+next `emit`, on the thread that pulls — the generator has no thread of its own. On other implementations it runs on a
+virtual thread of its own.
+
+A detached body runs apart from the code that started it — after its first operation, on whatever thread resumes it —
+so it uses its own handler's capability and those of handlers inside it; a capability of outside it is not its own.
+
 ## Delimited continuations
 
 `std.Delimited` is `shift0` and `reset0` (Materzok and Biernacki) on the API: a reset is a handler, its prompt the
@@ -357,7 +393,8 @@ What every implementation keeps, checked by the [TCK](implementations.md#the-tck
 
 - an operation goes to the handler whose capability performs it; operations of other effects pass the handlers between;
 - a handler's clauses run outside its body; a clause performing its own effect is refused;
-- a `Resume` is resumed at most once; a `MultiResume`, on a `MultiEffects`, any number of times;
+- a `Resume` is resumed at most once, while its clause runs; a `MultiResume`, on a `MultiEffects`, any number of times;
+  a `Later`, on a `DetachedEffects`, at most once, at any time, from any thread;
 - a rest not resumed unwinds by `Abandoned`, `finally` blocks run, up to its own handler's body;
 - a capability is used only by its body while it runs — on the body's thread, or in a body nested in it; after its
   handler has returned, on another thread, or in its own handler's clause, `perform` throws `IllegalStateException`;

@@ -1,11 +1,11 @@
 package okay.direct.loom;
 
-import okay.direct.Effects;
-import okay.direct.tck.EffectsTck;
+import okay.direct.DetachedEffects;
+import okay.direct.tck.DetachedEffectsTck;
 
-class LoomEffectsTest extends EffectsTck {
+class LoomEffectsTest extends DetachedEffectsTck {
     @Override
-    public Effects effects() {
+    public DetachedEffects effects() {
         return new LoomEffects();
     }
 }

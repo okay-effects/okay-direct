@@ -180,6 +180,14 @@ static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
 }
 ```
 
+The handler waits for the service's future with `join()`: on a virtual thread that holds no OS thread. With no
+waiting at all, run the program under `std.Async` and let the handler await the future — the rest is resumed by the
+future's callback ([Guide](guide.md#detached-continuations-asynchrony-without-waiting)):
+
+```java
+case Prices.Price p -> k.answer(p, Async.await(async, service.quote(p.item())));
+```
+
 **Running it**, on `fx = new LoomEffects()` (or `new ThreadEffects()`, with no flags):
 
 ```java

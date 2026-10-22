@@ -1,11 +1,11 @@
 package okay.direct.threads;
 
-import okay.direct.Effects;
-import okay.direct.tck.EffectsTck;
+import okay.direct.DetachedEffects;
+import okay.direct.tck.DetachedEffectsTck;
 
-class ThreadEffectsTest extends EffectsTck {
+class ThreadEffectsTest extends DetachedEffectsTck {
     @Override
-    public Effects effects() {
+    public DetachedEffects effects() {
         return new ThreadEffects();
     }
 }

@@ -5,14 +5,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import okay.direct.Answer;
+import okay.direct.DetachedEffects;
+import okay.direct.DetachedHandler;
 import okay.direct.Effect;
 import okay.direct.Effect.Op;
 import okay.direct.Effects;
+import okay.direct.Later;
 import okay.direct.TailHandler;
 
 /**
@@ -69,12 +74,17 @@ public sealed interface Emits<A> {
 
     /**
      * The values the body emits as a LAZY stream: the body run as the stream is pulled, each emit waiting until its
-     * value is taken; a stream that stops early ({@code findFirst}, {@code limit}) stops it. The body runs on a virtual
-     * thread of its own, so it has the capabilities it is given here, not those of the code making the stream. Closed,
-     * the stream drops the body's rest, which unwinds ({@code finally} blocks run); a stream left unclosed stops the
-     * body when it is collected. A failure of the body is the stream's, thrown as it is pulled.
+     * value is taken; a stream that stops early ({@code findFirst}, {@code limit}) stops it. Closed, the stream drops
+     * the body's rest, which unwinds ({@code finally} blocks run); a stream left unclosed stops the body when it is
+     * collected. A failure of the body is the stream's, thrown as it is pulled.
+     *
+     * <p>On a {@link DetachedEffects} (Loom's, threads') the body is PULLED: each value taken resumes its detached rest
+     * up to its next emit, on the thread that pulls — no thread of its own. On any other, it runs on a virtual thread of
+     * its own, handing its values over. Either way it has the capabilities it is given here, not those of the code
+     * making the stream.
      */
     static <A> Stream<A> stream(Effects effects, Generator<A, ? extends Exception> body) {
+        if (effects instanceof DetachedEffects detached) return pulled(detached, body);
         var producer = new Producer<A>(effects, body);
         var spliterator = new Spliterators.AbstractSpliterator<A>(Long.MAX_VALUE, Spliterator.ORDERED) {
             @Override
@@ -84,6 +94,104 @@ public sealed interface Emits<A> {
         };
         Producer.CLEANER.register(spliterator, producer::stop);
         return StreamSupport.stream(spliterator, false).onClose(producer::stop);
+    }
+
+    private static <A> Stream<A> pulled(DetachedEffects effects, Generator<A, ? extends Exception> body) {
+        var pull = new Pull<A>(effects, body);
+        var spliterator = new Spliterators.AbstractSpliterator<A>(Long.MAX_VALUE, Spliterator.ORDERED) {
+            @Override
+            public boolean tryAdvance(Consumer<? super A> action) {
+                return pull.next(action);
+            }
+        };
+        Producer.CLEANER.register(spliterator, pull.stopper());
+        return StreamSupport.stream(spliterator, false).onClose(pull::stop);
+    }
+
+    /** The body pulled: run up to its next emit by each value taken, its rest detached in between. */
+    final class Pull<A> {
+        private final DetachedEffects effects;
+        private final Generator<A, ? extends Exception> body;
+        /** shared with the cleaner: the rest waiting, to drop */
+        private final Later<Emits<A>>[] waiting;
+        private Emit<A> emitted;
+        private CompletableFuture<Void> done;
+        private boolean ended;
+
+        @SuppressWarnings("unchecked") // an array of one, of a generic type
+        private Pull(DetachedEffects effects, Generator<A, ? extends Exception> body) {
+            this.effects = effects;
+            this.body = body;
+            this.waiting = (Later<Emits<A>>[]) new Later<?>[1];
+        }
+
+        synchronized boolean next(Consumer<? super A> action) {
+            if (ended) return false;
+            if (done == null) {
+                done = effects.start(new DetachedHandler<Emits<A>, Void, Void>() {
+                    @Override
+                    public Void value(Void unit) {
+                        return null;
+                    }
+
+                    @Override
+                    public void operation(Emits<A> op, Later<Emits<A>> k) {
+                        switch (op) {
+                            case Emit<A> emit -> {
+                                emitted = emit;
+                                waiting[0] = k;
+                            }
+                        }
+                    }
+                }, (okay.direct.Effect<Emits<A>> out) -> {
+                    body.run(out);
+                    return null;
+                });
+            } else {
+                var k = waiting[0];
+                var emit = emitted;
+                waiting[0] = null;
+                emitted = null;
+                k.answer(emit, null);
+            }
+            if (waiting[0] != null) {
+                action.accept(emitted.value());
+                return true;
+            }
+            ended = true;
+            try {
+                done.join();
+            } catch (CompletionException e) {
+                if (e.getCause() instanceof RuntimeException r) throw r;
+                if (e.getCause() instanceof Error r) throw r;
+                throw e;
+            }
+            return false;
+        }
+
+        synchronized void stop() {
+            ended = true;
+            stopper().run();
+        }
+
+        /** Drops the rest waiting, if any: it unwinds. Holds no reference to the stream, for the cleaner. */
+        Runnable stopper() {
+            var waiting = this.waiting;
+            return () -> {
+                Later<Emits<A>> k;
+                synchronized (waiting) {
+                    k = waiting[0];
+                    waiting[0] = null;
+                }
+                if (k != null) {
+                    try {
+                        k.drop();
+                    } catch (IllegalStateException alreadyResumed) {
+                        // resumed meanwhile
+                    }
+                }
+            };
+        }
     }
 
     /** The body on its thread, handing its values over one at a time. */

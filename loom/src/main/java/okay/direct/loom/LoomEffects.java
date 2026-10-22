@@ -1,24 +1,31 @@
 package okay.direct.loom;
 
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import jdk.internal.vm.Continuation;
 import jdk.internal.vm.ContinuationScope;
 import okay.direct.Abandoned;
 import okay.direct.Answer;
 import okay.direct.Body;
+import okay.direct.DetachedEffects;
+import okay.direct.DetachedHandler;
 import okay.direct.Effect;
-import okay.direct.Effects;
 import okay.direct.Handler;
+import okay.direct.Later;
 import okay.direct.Resume;
 import okay.direct.TailHandler;
 
 /**
  * ON HOTSPOT'S CONTINUATIONS, {@code jdk.internal.vm.Continuation}: the body runs in a continuation of a scope of
- * its own, and {@code perform} yields to that scope, through any continuations of inner handlers. One-shot.
+ * its own, and {@code perform} yields to that scope, through any continuations of inner handlers. One-shot; its
+ * continuations can be DETACHED, run again on whatever thread resumes them (a {@link DetachedEffects}).
  * Scoped values are switched with the stack ({@link Bindings}). Needs, to compile and to run,
  * {@code --add-exports=java.base/jdk.internal.vm=ALL-UNNAMED}, {@code --add-exports=java.base/jdk.internal.access=ALL-UNNAMED},
  * and to run {@code --add-opens=java.base/java.lang=ALL-UNNAMED}.
  */
-public final class LoomEffects implements Effects {
+public final class LoomEffects implements DetachedEffects {
     @Override
     public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E {
         return new Run<F, A, E>(body).handle(handler);
@@ -30,8 +37,24 @@ public final class LoomEffects implements Effects {
     }
 
     @Override
+    public <F, A, R, E extends Exception> CompletableFuture<R> start(DetachedHandler<F, A, R> handler, Body<F, A, E> body) {
+        var result = new CompletableFuture<R>();
+        new Run<F, A, E>(body).detached(handler, result);
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "LoomEffects";
+    }
+
+    /** An answer that is a failure, to be thrown at the perform. */
+    private record Raised(Throwable failure) {}
+
+    static RuntimeException thrown(Throwable failure) {
+        if (failure instanceof RuntimeException e) return e;
+        if (failure instanceof Error e) throw e;
+        return new CompletionException(failure);
     }
 
     private static final class Run<F, A, E extends Exception> implements Effect<F> {
@@ -67,6 +90,10 @@ public final class LoomEffects implements Effects {
             Continuation.yield(scope);
             Bindings.restore(inside);
             if (abandoned) throw new Abandoned(this);
+            if (answer instanceof Raised raised) {
+                answer = null;
+                throw thrown(raised.failure());
+            }
             return (X) answer;
         }
 
@@ -134,6 +161,71 @@ public final class LoomEffects implements Effects {
                 continuation.run();
             } finally {
                 Bindings.restore(outside);
+            }
+        }
+
+        /** The body run to its next operation, here: the clause given a detached rest; or its end, the future's. */
+        <R> void detached(DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+            boolean more;
+            try {
+                more = next();
+            } catch (Throwable t) {
+                result.completeExceptionally(t);
+                return;
+            }
+            if (!more) {
+                try {
+                    result.complete(handler.value(value));
+                } catch (Throwable t) {
+                    result.completeExceptionally(t);
+                }
+                return;
+            }
+            var k = new Detached<R>(pending, handler, result);
+            try {
+                handler.operation(operation(), k);
+            } catch (Throwable t) {
+                if (k.take()) abandon();
+                result.completeExceptionally(t);
+            }
+        }
+
+        private final class Detached<R> implements Later<F> {
+            private final Op<F, ?> op;
+            private final DetachedHandler<F, A, R> handler;
+            private final CompletableFuture<R> result;
+            private final AtomicBoolean taken = new AtomicBoolean();
+
+            Detached(Op<F, ?> op, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+                this.op = op;
+                this.handler = handler;
+                this.result = result;
+            }
+
+            boolean take() {
+                return taken.compareAndSet(false, true);
+            }
+
+            @Override
+            public <X> void answer(Op<F, X> op, X value) {
+                if (op != this.op) throw new IllegalArgumentException("resumed with " + op + ", not with " + this.op);
+                if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
+                answer = value;
+                detached(handler, result);
+            }
+
+            @Override
+            public void raise(Throwable failure) {
+                if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
+                answer = new Raised(failure);
+                detached(handler, result);
+            }
+
+            @Override
+            public void drop() {
+                if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
+                abandon();
+                result.completeExceptionally(new CancellationException("the rest dropped by its handler"));
             }
         }
 

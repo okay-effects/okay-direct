@@ -7,6 +7,7 @@ Three implementations of `Effects`, each passing the same TCK:
 | module | `loom` | `threads` | `espresso` |
 | on | `jdk.internal.vm.Continuation` | a virtual thread per body | Espresso's continuations |
 | shots | one | one | MANY: a `MultiEffects` |
+| detached continuations | yes: a `DetachedEffects` | yes: a `DetachedEffects` | no |
 | JVM | HotSpot, JDK 25+ | any JDK 25+ | Espresso (Java on Truffle), JDK 25 |
 | flags | see [Loom](#loom) | none | see [Espresso](#espresso) |
 | 100,000 operations of `State` | about 0.06 s | about 1.5 s | (multi-shot: a copy per resumption) |
@@ -24,6 +25,8 @@ scope suspends the whole chain. The handler's clause runs where `handle` was cal
 continuation. This is multi-prompt `shift0`, each scope a prompt.
 
 - **One-shot**: Loom's continuations cannot be copied; a second resumption throws.
+- **Detached**: a continuation is not tied to a thread (a virtual thread's moves from carrier to carrier), so a `Later`
+  runs the rest on whatever thread resumes it — `run()` there, up to the next yield.
 - **Scoped values switched with the stack.** A virtual thread has its own `Thread` object, so its `ScopedValue`
   bindings; a continuation of ours runs on the thread that runs it, and Loom does not switch the bindings on a yield. So
   `LoomEffects` saves the bindings of the stack it leaves and puts back those of the stack it goes on with, the thread's
@@ -44,6 +47,8 @@ Every handled body runs on a virtual thread of its own; `perform` hands the oper
 a `SynchronousQueue` and waits for the answer. Portable: no flags, no internal API (the release is Java 25 bytecode, so JDK 25+).
 
 - **One-shot.** A dropped rest is told so through its reply, and unwinds.
+- **Detached.** A `Later` hands its answer to the body's thread and waits, on the resuming thread, for the body's next
+  operation or its end.
 - **The confinement of capabilities** is checked by a chain of bodies in a `ThreadLocal`: a body's thread, and the
   threads of bodies nested in it.
 - `ThreadLocal`s and `Thread.currentThread()` inside a body are the body's thread's, not the caller's — unlike Loom,
@@ -115,6 +120,7 @@ class LoomEffectsTest extends EffectsTck {
 | `InterceptorTests` | an interceptor changing a plain effect; the audit of payments; a hand-written handler of a sensitive effect unable to answer; an audited capability not outliving its audit; the observer telling and refusing; a dropped rest unwinding through inner handlers; a throwing tail clause | 8 |
 | `DelimitedTests` | `shift0`; a dropped rest; an outer prompt through an inner reset; the reset's own prompt refused in a `shift0`'s body; one-shot refused twice; reflection of `Optional`, with other effects | 7 |
 | `EmitsTests` | a generator collected; a generator as a lazy stream, pulled only as far as needed; a closed stream stopping its body, which unwinds; a failure of the body thrown by the stream | 4 |
+| `DetachedEffectsTck` | `await` with no thread waiting; a failed future thrown at its await; the shop awaiting an asynchronous service; a `Later` resumed once; a dropped `Later` unwinding, the future cancelled | 5 |
 | `MultiEffectsTck` | `Choose`; each branch's locals and one heap; a state inside a choice, and outside; a failure per branch; an outer choice forking an inner one; a multi-shot `k`; reflection of lists and streams; Pythagorean triples | 11 |
 
 The nested choice's eight results were checked against an independent freer monad.

@@ -64,6 +64,14 @@ upper bound — with two effects left it is `Effect`, the row collapsed; excepti
 the JDK's lambdas declare no `throws`, so `forEach` could not perform. Kept: a body's own checked exceptions, `Body<F, A,
 E>`, thrown on by `handle` — one type variable, inferred well.
 
+## Detached continuations
+
+A `Resume` dies with its clause: the handler's code holds the stack the rest returns to. A `Later` has no such place
+to return to: resumed, it runs the rest on the resuming thread up to the next operation, where the clause is called
+again, and its end completes a future. Loom's continuations are not tied to a thread, so this is a `run()` on another
+one; threads hand the answer over and wait there. Espresso's continuations are single-threaded, so it is not a
+`DetachedEffects`. What it buys: `await` with no thread waiting, and generators pulled with no thread of their own.
+
 ## Shots as types
 
 Whether a continuation may be resumed more than once depends on the runtime: Loom's cannot be copied, Espresso's can.
