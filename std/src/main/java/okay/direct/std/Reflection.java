@@ -1,5 +1,7 @@
 package okay.direct.std;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -18,7 +20,10 @@ import okay.direct.MultiEffects;
  * Optional<Integer> sum = Reflection.reify(fx, Optional::of,
  *     (Delimited.Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));
  * }</pre>
- * Optional's pair is here already, typed: {@link #optional} and {@link #get}.
+ * The pairs of Optional ({@link #optional}), of an either ({@link #outcome}) and of a writer ({@link #written}) are
+ * here already, typed, each with its {@code get}. A monad whose bind calls the rest LATER — a reader, a state, a
+ * future — cannot be reflected by a rest that dies with its clause: use the effect instead ({@link Reader},
+ * {@link State}), or for a future {@link Async}, whose rest is detached.
  * Java has no higher kinds, so the monad is not a type: its {@code unit} is given to reify, its {@code bind} to each
  * reflect, as a method reference. A generic bind ({@code Optional::flatMap}) does not tell Java the value's type,
  * so a monad's reflect is best written once, as {@code get} above, where it is known; and the prompt's type is
@@ -58,6 +63,59 @@ public final class Reflection {
     /** The value of {@code m}, under {@link #optional}: if it is empty, the rest of the body is dropped (it unwinds). */
     public static <A, R> A get(Delimited.Prompt<Optional<R>> prompt, Optional<A> m) {
         return reflect(prompt, m, Optional::flatMap);
+    }
+
+    /**
+     * THE EITHER MONAD, {@link Fail.Outcome}, reified: the body's value as a success, or the first failure a
+     * {@link #get} in it met — the rest of the body then not run.
+     * <pre>{@code
+     * Outcome<String, Integer> total = Reflection.outcome(fx, p -> get(p, parse("40")) + get(p, parse("2")));
+     * }</pre>
+     */
+    public static <E, R> Fail.Outcome<E, R> outcome(Effects effects,
+            Function<Delimited.Prompt<Fail.Outcome<E, R>>, R> body) {
+        return reify(effects, Fail.Success::new, body);
+    }
+
+    /** The value of a success, under {@link #outcome}; a failure is the outcome's, the rest dropped. */
+    public static <E, A, R> A get(Delimited.Prompt<Fail.Outcome<E, R>> prompt, Fail.Outcome<E, A> m) {
+        return reflect(prompt, m, (Fail.Outcome<E, A> o, Function<A, Fail.Outcome<E, R>> k) -> switch (o) {
+            case Fail.Success<E, A> success -> k.apply(success.value());
+            case Fail.Failure<E, A> failure -> new Fail.Failure<>(failure.error());
+        });
+    }
+
+    /** A value with what was written on the way to it: the writer monad's. */
+    public record Written<W, A>(A value, List<W> log) {
+        public Written {
+            log = List.copyOf(log);
+        }
+    }
+
+    /**
+     * THE WRITER MONAD, reified: the body's value, with everything written by the {@link #get}s and {@link #tell}s
+     * in it, in order.
+     * <pre>{@code
+     * Written<String, Integer> w = Reflection.written(fx, p -> { tell(p, "start"); return get(p, step(1)) + 1; });
+     * }</pre>
+     */
+    public static <W, R> Written<W, R> written(Effects effects, Function<Delimited.Prompt<Written<W, R>>, R> body) {
+        return reify(effects, value -> new Written<>(value, List.of()), body);
+    }
+
+    /** The value of {@code m}, under {@link #written}: what it wrote, written. */
+    public static <W, A, R> A get(Delimited.Prompt<Written<W, R>> prompt, Written<W, A> m) {
+        return reflect(prompt, m, (Written<W, A> w, Function<A, Written<W, R>> k) -> {
+            var rest = k.apply(w.value());
+            var log = new ArrayList<W>(w.log());
+            log.addAll(rest.log());
+            return new Written<>(rest.value(), log);
+        });
+    }
+
+    /** {@code entry} written, under {@link #written}. */
+    public static <W, R> void tell(Delimited.Prompt<Written<W, R>> prompt, W entry) {
+        get(prompt, new Written<W, Void>(null, List.of(entry)));
     }
 
     /**

@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import okay.direct.Effects;
 import okay.direct.std.Delimited;
+import okay.direct.std.Fail;
 import okay.direct.std.Delimited.Prompt;
 import okay.direct.std.Reflection;
 import okay.direct.std.State;
@@ -136,5 +137,47 @@ interface DelimitedTests {
             return a + get(p, Optional.of(State.get(state)));
         }));
         assertEquals(new State.Final<>(11, Optional.of(21)), result);
+    }
+
+    static Fail.Outcome<String, Integer> parse(String s) {
+        try {
+            return new Fail.Success<>(Integer.parseInt(s));
+        } catch (NumberFormatException e) {
+            return new Fail.Failure<>("not a number: " + s);
+        }
+    }
+
+    @Test
+    default void anOutcomeReflected() {
+        var fx = effects();
+        Fail.Outcome<String, Integer> sum = Reflection.outcome(fx, p -> Reflection.get(p, parse("40"))
+            + Reflection.get(p, parse("2")));
+        assertEquals(new Fail.Success<String, Integer>(42), sum);
+        var cleaned = new AtomicBoolean();
+        Fail.Outcome<String, Integer> failed = Reflection.outcome(fx, p -> {
+            try {
+                return Reflection.get(p, parse("4o")) + Reflection.get(p, parse("2"));
+            } finally {
+                cleaned.set(true);
+            }
+        });
+        assertEquals(new Fail.Failure<String, Integer>("not a number: 4o"), failed);
+        assertTrue(cleaned.get());
+    }
+
+    static Reflection.Written<String, Integer> step(int n) {
+        return new Reflection.Written<>(n * 10, List.of("step " + n));
+    }
+
+    @Test
+    default void aWriterReflected() {
+        Reflection.Written<String, Integer> written = Reflection.written(effects(), p -> {
+            Reflection.tell(p, "start");
+            int total = 0;
+            for (int i = 1; i <= 3; i++) total += Reflection.get(p, step(i));
+            Reflection.tell(p, "end");
+            return total;
+        });
+        assertEquals(new Reflection.Written<>(60, List.of("start", "step 1", "step 2", "step 3", "end")), written);
     }
 }
