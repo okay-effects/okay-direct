@@ -50,11 +50,11 @@
         {
           "name": "okay-direct-scala-zio-0.1.0.jar",
           "url": "okay-direct-scala-zio-0.1.0.jar",
-          "size": 41847,
-          "sha512": "e2b99f50eb9535b2ee3097a854824809e763195fa0eef93f3d97e71fe7a795eac4703a3543e4ec4ce5e9418998f8525ba6e854a13ff45253b9ed7dcd8f2b5400",
-          "sha256": "decea19e25ac1d48cc2ec4b6a6989555e43f9c9b1d1fc2d9b9be79e9be498ca6",
-          "sha1": "93874a2a22ceeb9a6bf08736682bc4f37b829edb",
-          "md5": "3401eb5b2a0939f3ac15ff20d4228b62"
+          "size": 41870,
+          "sha512": "a2e6dbcefdaa4bdedc95724831e2917ad0c10efdfd2767e1208dfdc7c4418e1aefe68c011c53521ed80dda8b259d9c6c3ca13c0eff1951dcec8574ac555ce094",
+          "sha256": "27a087012f2097ddcb96dd7fb07ba59e2aa5d78704cc02c7abc55f6b69e74ce8",
+          "sha1": "cc08e1e63b29cacb1f44376a26a88852de262ecc",
+          "md5": "ca3a524164f4d0b9c6c95593f8053b76"
         }
       ]
     },
@@ -94,11 +94,11 @@
         {
           "name": "okay-direct-scala-zio-0.1.0.jar",
           "url": "okay-direct-scala-zio-0.1.0.jar",
-          "size": 41847,
-          "sha512": "e2b99f50eb9535b2ee3097a854824809e763195fa0eef93f3d97e71fe7a795eac4703a3543e4ec4ce5e9418998f8525ba6e854a13ff45253b9ed7dcd8f2b5400",
-          "sha256": "decea19e25ac1d48cc2ec4b6a6989555e43f9c9b1d1fc2d9b9be79e9be498ca6",
-          "sha1": "93874a2a22ceeb9a6bf08736682bc4f37b829edb",
-          "md5": "3401eb5b2a0939f3ac15ff20d4228b62"
+          "size": 41870,
+          "sha512": "a2e6dbcefdaa4bdedc95724831e2917ad0c10efdfd2767e1208dfdc7c4418e1aefe68c011c53521ed80dda8b259d9c6c3ca13c0eff1951dcec8574ac555ce094",
+          "sha256": "27a087012f2097ddcb96dd7fb07ba59e2aa5d78704cc02c7abc55f6b69e74ce8",
+          "sha1": "cc08e1e63b29cacb1f44376a26a88852de262ecc",
+          "md5": "ca3a524164f4d0b9c6c95593f8053b76"
         }
       ]
     },

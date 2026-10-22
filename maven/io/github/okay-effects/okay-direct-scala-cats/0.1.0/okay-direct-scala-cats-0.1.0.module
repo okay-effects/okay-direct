@@ -50,11 +50,11 @@
         {
           "name": "okay-direct-scala-cats-0.1.0.jar",
           "url": "okay-direct-scala-cats-0.1.0.jar",
-          "size": 38703,
-          "sha512": "1284050426a4ba2e5b99672a6530a6c2311b9a921e5eb75991d2d8d1c504bb6125db969e48d7f460a76095f5b36087848d1d7ee18871ea55b3372db09946a987",
-          "sha256": "b23cbd273ebb7a56fe2f56def02d64dd6aeb30bdbb921d45b8d755ad54c624c4",
-          "sha1": "ea68b4926c5bb48f795de798190aaddb3a47eb9d",
-          "md5": "96125d52602df1f61acb0d441ba1b72b"
+          "size": 38730,
+          "sha512": "14d864af744fc14e24a9f310cec33f5feba7ecee3cf60011f36b07a7e81da02b56ce61ec3b57c98d292e2785ecf8f4688e4e1bbc2282a97ee7148d598784b8aa",
+          "sha256": "37b2cb2f60a2c952604b73ce3a35a38fe24bd9155d16b485d06dd42f6a7e05c8",
+          "sha1": "52fd4e20a8351e28cd4d29c17c785eaecf51e5af",
+          "md5": "541764d753574de6bfd8de999c965bba"
         }
       ]
     },
@@ -94,11 +94,11 @@
         {
           "name": "okay-direct-scala-cats-0.1.0.jar",
           "url": "okay-direct-scala-cats-0.1.0.jar",
-          "size": 38703,
-          "sha512": "1284050426a4ba2e5b99672a6530a6c2311b9a921e5eb75991d2d8d1c504bb6125db969e48d7f460a76095f5b36087848d1d7ee18871ea55b3372db09946a987",
-          "sha256": "b23cbd273ebb7a56fe2f56def02d64dd6aeb30bdbb921d45b8d755ad54c624c4",
-          "sha1": "ea68b4926c5bb48f795de798190aaddb3a47eb9d",
-          "md5": "96125d52602df1f61acb0d441ba1b72b"
+          "size": 38730,
+          "sha512": "14d864af744fc14e24a9f310cec33f5feba7ecee3cf60011f36b07a7e81da02b56ce61ec3b57c98d292e2785ecf8f4688e4e1bbc2282a97ee7148d598784b8aa",
+          "sha256": "37b2cb2f60a2c952604b73ce3a35a38fe24bd9155d16b485d06dd42f6a7e05c8",
+          "sha1": "52fd4e20a8351e28cd4d29c17c785eaecf51e5af",
+          "md5": "541764d753574de6bfd8de999c965bba"
         }
       ]
     },
