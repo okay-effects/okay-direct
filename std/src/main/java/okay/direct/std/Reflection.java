@@ -45,14 +45,14 @@ public final class Reflection {
 
     /**
      * THE OPTIONAL MONAD, reified: the body's value, or empty if a {@link #get} in it found nothing — the rest of the
-     * body then not run. Its types are inferred, the answer's from the target:
+     * body then not run — or if the body returns null (as {@code Optional.map} does). Its types are inferred, the answer's from the target:
      * <pre>{@code
      * Optional<String> city = Reflection.optional(fx, p -> get(p,
      *     Stream.of("user", "address", "city").reduce(doc, (node, key) -> get(p, node.field(key)), (a, b) -> a).str()));
      * }</pre>
      */
     public static <R> Optional<R> optional(Effects effects, Function<Delimited.Prompt<Optional<R>>, R> body) {
-        return reify(effects, Optional::of, body);
+        return reify(effects, Optional::ofNullable, body);
     }
 
     /** The value of {@code m}, under {@link #optional}: if it is empty, the rest of the body is dropped (it unwinds). */

@@ -60,6 +60,7 @@ interface DelimitedTests {
             }, (a, b) -> a).str()));
         assertEquals(Optional.empty(), number);
         assertEquals(List.of("user", "phone"), visited); // the rest of the fold not run
+        assertEquals(Optional.empty(), Reflection.optional(fx, p -> (String) null)); // null is empty, as in map
     }
 
     @Test
