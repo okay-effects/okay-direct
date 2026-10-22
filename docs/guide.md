@@ -54,7 +54,7 @@ static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state,
     return base < 0 ? Fail.raise(fail, "negative") : base;
 }
 
-Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.attempt(fx, fail -> program(reader, state, fail))));
+Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.attempt(fx, (Effect<Fail<String>> fail) -> program(reader, state, fail))));
 ```
 
 A missing handler does not compile: there is no capability to pass. Two handlers of one effect — two counters, both
@@ -249,7 +249,7 @@ Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
     }
 };
 
-Trail.keep(fx, trail -> Fail.attempt(fx, fail ->
+Trail.keep(fx, trail -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
     Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded, pay -> payments(pay)))));
 ```
 

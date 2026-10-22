@@ -178,13 +178,13 @@ static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
 ```java
 var list = Map.of("tea", 30, "cake", 50, "jam", 20);
 
-Fail.attempt(fx, fail -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+Fail.attempt(fx, (Effect<Fail<String>> fail) -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
 // Success[value=100]
 
-Fail.attempt(fx, fail -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+Fail.attempt(fx, (Effect<Fail<String>> fail) -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
 // Failure[error=no price for coffee] — and cake is never priced
 
-Trail.keep(fx, trail -> Fail.attempt(fx, fail ->
+Trail.keep(fx, trail -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
     priceList(fx, list, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
 // Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
 ```
