@@ -31,8 +31,15 @@ continuation. This is multi-prompt `shift0`, each scope a prompt.
   bindings; a continuation of ours runs on the thread that runs it, and Loom does not switch the bindings on a yield. So
   `LoomEffects` saves the bindings of the stack it leaves and puts back those of the stack it goes on with, the thread's
   cache of scoped values cleared (`Bindings`): without it a scoped value bound in a body leaked into its handler's clause.
-- **`synchronized` is fine** (JDK 24+, JEP 491). A native frame between `handle` and `perform` — a call by reflection,
-  a class's static initializer — pins the continuation, and the `perform` throws.
+- **`synchronized` in a body is fine** (JDK 24+, JEP 491). A native frame between `handle` and `perform` — a call by
+  reflection, a class's static initializer — pins the continuation, and the `perform` throws.
+- **NO RESUMING UNDER A MONITOR.** A continuation run while the thread holds a monitor taken OUTSIDE it — a future
+  completed inside `synchronized`, whose callback resumes a detached body — crashes HotSpot 25 when the body yields
+  again (SIGSEGV in `LightweightSynchronizer::exit`; a few lines reproduce it with `Continuation` alone). `std` never
+  does it: its channels and clocks complete outside their locks, `Emits` takes a `ReentrantLock`. Code completing a
+  future an `Async` body awaits must do the same.
+- **Awaits of what is already there take no stack**: a rest answered by its clause before the clause returns goes on
+  in the run's loop, not in a call from the clause.
 - **Flags**, to compile and to run:
 
   ```

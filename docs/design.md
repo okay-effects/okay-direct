@@ -11,7 +11,8 @@ Why okay-direct is built as it is: what was tried, what the compilers and the JV
 7. [Scoped values and continuations](#scoped-values-and-continuations)
 8. [Multi-shot: frames copied, heap shared](#multi-shot-frames-copied-heap-shared)
 9. [Control and audit with capabilities](#control-and-audit-with-capabilities)
-10. [What the tests found](#what-the-tests-found)
+10. [Structured concurrency, and time as the handler's](#structured-concurrency-and-time-as-the-handlers)
+11. [What the tests found](#what-the-tests-found)
 
 ## Direct style, not a monad
 
@@ -71,6 +72,18 @@ to return to: resumed, it runs the rest on the resuming thread up to the next op
 again, and its end completes a future. Loom's continuations are not tied to a thread, so this is a `run()` on another
 one; threads hand the answer over and wait there. Espresso's continuations are single-threaded, so it is not a
 `DetachedEffects`. What it buys: `await` with no thread waiting, and generators pulled with no thread of their own.
+
+## Structured concurrency, and time as the handler's
+
+`Async`'s tasks are bodies of their own, each a detached run; a task cancelled has its `Later` dropped, which is the
+unwinding every dropped rest gets — so cancellation needs nothing new: `finally` runs, resources are released. A run
+ends after its tasks (its future is the body's value once they have ended), as Kotlin's `coroutineScope` or Java's
+`StructuredTaskScope`. What can be given up is a type the handler knows: a stage that is a channel's wait is REVOKED
+(its claim taken) before the rest is dropped, so a value is never sent into a cancelled task; any other future is
+simply not listened to.
+
+Time is an operation (`Timer`, `Now`) answered by the run's clock: virtual time is not a mock of `Thread.sleep` but
+another handler's answer — the program's code the same, its order of events fixed.
 
 ## Shots as types
 
@@ -134,3 +147,6 @@ wraps every capability its handlers hand out.
 | on Espresso, a rest resumed from an outer clause sent its events to its first owner | `shift0` to an outer prompt | the resumer owns the rest |
 | on Espresso, one branch dropped marked the whole multi-shot handling dropped | the triples' `none` | the dropped chain's fibers marked |
 | `Choose.all` collected into a list shared by the branches | an outer choice inside an inner one | lists made after both resumptions |
+| each await of a completed future resumed the rest from its clause: the stack grew with the loop | 200 000 awaits | the rest answered in its clause goes on in the run's loop |
+| HotSpot 25 crashed when a race's future was completed under a lock: the body resumed under a monitor of outside it | the race all of whose bodies fail | no resuming under a monitor: futures completed outside locks, `Emits` on a `ReentrantLock` |
+| a task cancelled while waiting to receive would have lost the value sent to it | the cancelled receiver | a channel's waits are revocable: claimed by the cancellation, or the value comes and the task stops at its next await |

@@ -15,9 +15,14 @@ Everything here is in `okay.direct` (the API, module `api`) and `okay.direct.std
 9. [Control and audit](#control-and-audit)
 10. [Generators: streams on any JDK](#generators-streams-on-any-jdk)
 11. [Detached continuations: asynchrony without waiting](#detached-continuations-asynchrony-without-waiting)
-12. [Delimited continuations](#delimited-continuations)
-13. [Monadic reflection](#monadic-reflection)
-14. [The contract](#the-contract)
+12. [Structured concurrency](#structured-concurrency)
+13. [Time: the system's and virtual](#time-the-systems-and-virtual)
+14. [Channels and select](#channels-and-select)
+15. [Delimited continuations](#delimited-continuations)
+16. [Monadic reflection](#monadic-reflection)
+17. [SQL: a transaction is a handler](#sql-a-transaction-is-a-handler)
+18. [Tracing with OpenTelemetry](#tracing-with-opentelemetry)
+19. [The contract](#the-contract)
 
 ## Effects and operations
 
@@ -335,6 +340,94 @@ virtual thread of its own.
 A detached body runs apart from the code that started it — after its first operation, on whatever thread resumes it —
 so it uses its own handler's capability and those of handlers inside it; a capability of outside it is not its own.
 
+An await of a future already completed takes no stack: a rest answered by its clause before the clause returns goes on
+in the implementation's loop, so a loop of a million such awaits runs in constant stack.
+
+## Structured concurrency
+
+`Async.fork(async, body)` starts a body of its own beside this one — at once, on this thread, up to its first await —
+and gives its `Task`: its `future()`, and `cancel()`. The forked body has its OWN capability, the one its lambda is
+given; Java does not let the lambda's parameter shadow `async`, so it gets another name:
+
+```java
+CompletableFuture<String> page = Async.run(fx, async -> Async.both(async,
+    a -> Async.await(a, users.find(id)),
+    b -> Async.await(b, orders.of(id)),
+    (user, orders) -> render(user, orders)));
+```
+
+| | |
+|---|---|
+| `fork(async, body)`, `join(async, task)` | a task started, and its value awaited: its failure thrown at the join |
+| `both(async, a, b, combine)` | two bodies at once; the first failure thrown, the other cancelled |
+| `all(async, bodies)` | all at once, the values in order; the first failure thrown, the others cancelled |
+| `race(async, bodies)` | the first to succeed, the others cancelled; all failed, the first failure, the others suppressed |
+| `timeout(async, limit, body)` | the value if the body ends in time, else empty and the body cancelled |
+
+Concurrency here is that of awaits, as in JavaScript: the bodies interleave at their awaits, each going on on the thread
+that completed what it awaited. A computation for many cores is awaited as a future of an executor's.
+
+A CANCELLED task is dropped at the await it waits in, or at its next one: it unwinds, its `finally` blocks run, and its
+own tasks are cancelled with it. A run ends when the tasks forked in it have ended, so none outlives it; a run that
+fails cancels its tasks first. A task cancelled while it waits on a [channel](#channels-and-select) takes nothing and
+gives nothing.
+
+## Time: the system's and virtual
+
+Time is the handler's. `Async.sleep(async, d)`, `Async.now(async)`, `Async.timer(async, d)` and the timeouts ask the
+run's `Async.Clock`: `Clock.SYSTEM` by default, or one given to `Async.run(fx, clock, body)`. A `VirtualClock` moves
+only when told, `advance(d)` or `run()` (until no timer is left): each timer due completes in the order of its time, on
+the thread that moves the clock — so the bodies waiting go on there, in an order that is always the same.
+
+```java
+static <X> X retry(Effect<Async> async, int attempts, Supplier<X> call) {
+    for (int attempt = 0; ; attempt++) {
+        try {
+            return call.get();
+        } catch (RuntimeException e) {
+            if (attempt + 1 == attempts) throw e;
+            Async.sleep(async, Duration.ofSeconds(1L << attempt));
+        }
+    }
+}
+
+var clock = new VirtualClock();
+var result = Async.run(fx, clock, async -> retry(async, 5, service::call));   // fails 3 times, then "ok"
+clock.run();                                       // 7 seconds of backing off, in no time
+assertEquals("ok", result.join());
+```
+
+The program is the one that runs in production with the system's clock; the test gives its handler another time.
+
+## Channels and select
+
+`std.Channel<T>` is Go's channel between `Async` bodies: `send` waits while the channel is full — an unbuffered one,
+`new Channel<>()`, until a receiver takes the value; a buffered one, `new Channel<>(n)`, while `n` values wait — and
+`receive` while it is empty. Waiting is an await: no thread is held. `close()` takes no more values; the ones left are
+still received, then `Channel.Closed` is thrown, which ends `iterable(async)`'s loop:
+
+```java
+var numbers = new Channel<Integer>();
+CompletableFuture<Integer> sum = Async.run(fx, async -> Async.both(async,
+    a -> { for (int i = 1; i <= 100; i++) numbers.send(a, i); numbers.close(); return null; },
+    b -> { int total = 0; for (int n : numbers.iterable(b)) total += n; return total; },
+    (none, total) -> total));                                                                 // 5050
+```
+
+`Channel.select()` waits for the first of several channels, or a timeout by the run's clock, and runs the chosen case's
+function in the body, where it may await again:
+
+```java
+String next = Channel.<String>select()
+    .receive(orders, order -> "order " + order)
+    .receive(cancels, id -> "cancel " + id)
+    .timeout(Duration.ofSeconds(5), () -> "idle")
+    .await(async);
+```
+
+A select's cases are claimed together: a value goes to one case, and a select given up — by its timeout, or its task
+cancelled — takes none. Values are not null.
+
 ## Delimited continuations
 
 `std.Delimited` is `shift0` and `reset0` (Materzok and Biernacki) on the API: a reset is a handler, its prompt the
@@ -390,10 +483,68 @@ Stream<List<Integer>> triples = Reflection.stream(espresso, (Prompt<Stream<List<
 });   // [3, 4, 5], [6, 8, 10]
 ```
 
+The pairs of three monads are in `Reflection` already, typed, so that their types are inferred: `optional` and `get` for
+`Optional`, `outcome` and `get` for an either (`Fail.Outcome`), `written`, `get` and `tell` for a writer
+(`Reflection.Written`, a value and a log):
+
+```java
+Outcome<String, Integer> sum = Reflection.outcome(fx, p -> get(p, parse("40")) + get(p, parse("2")));
+                                       // Success[value=42]; with "4o": Failure[error=not a number: 4o]
+Written<String, Integer> w = Reflection.written(fx, p -> {
+    tell(p, "start");
+    int total = 0;
+    for (int i = 1; i <= 3; i++) total += get(p, step(i));     // step(i): (i * 10, ["step " + i])
+    return total;
+});                                         // Written[value=60, log=[start, step 1, step 2, step 3]]
+```
+
 On an ordinary JDK, write the same as a [generator](#generators-streams-on-any-jdk). `each`'s bind is EAGER: it resumes the rest for every element while its clause runs, then joins the streams —
 `Stream.flatMap` would resume it later, when the stream is consumed, after the continuation has ended. For the same
 reason a lazy monad (a future, an IO, a state function) cannot be reflected: its bind calls the rest after `reflect`
-has returned. Await it instead ([Scala](scala.md#cats-effect)).
+has returned. Await it instead ([Scala](scala.md#cats-effect)): a `CompletableFuture`'s reflection IS `Async` —
+`Async.run` its reify, with `completedFuture` its unit, and `Async.await` its reflect, its rest detached. For a reader
+or a state, use the effects, `Reader` and `State`.
+
+## SQL: a transaction is a handler
+
+Module `sql`, `okay.direct.sql`: a statement is an operation of `Sql`, data — its text and parameters — and
+`Transaction.run(fx, dataSource, body)` its handler. It opens a connection, runs the body's statements on it, commits
+when the body returns, and rolls back when it fails — or when a handler further out drops its rest: the body unwinds
+through the transaction. The program knows statements and failure, not connections nor commits:
+
+```java
+static Void transfer(Effect<Sql> sql, Effect<Fail<String>> fail, String from, String to, int amount) {
+    Sql.update(sql, "update account set balance = balance - ? where id = ?", amount, from);
+    if (balance(sql, from) < 0) Fail.raise(fail, "not enough money on " + from);       // rolled back
+    Sql.update(sql, "update account set balance = balance + ? where id = ?", amount, to);
+    return null;
+}
+
+Outcome<String, Void> done = Fail.attempt(fx, String.class, fail -> Transaction.run(fx, db,
+    sql -> transfer(sql, fail, "ann", "bob", 30)));
+```
+
+`Sql.query(sql, rows, text, params...)` gives the rows mapped, `Sql.one` the first, `Sql.update` the number changed; a
+statement that fails fails the transaction, `Sql.Failed`. CONTROL is on the capability: `Sql.readOnly(sql)` refuses
+changes (`Sql.Refused`), `Sql.logged(sql, log)` tells each statement with its parameters before it runs — an audit
+trail — and the program is the same.
+
+## Tracing with OpenTelemetry
+
+Module `otel`, `okay.direct.otel.Tracing`: `Tracing.traced(fx, tracer)` is `fx` whose every operation is a span, from
+its `perform` to its answer — the handler's work, a statement's, a service's, a wait. No change to the program:
+
+```java
+Effects traced = Tracing.traced(fx, openTelemetry.getTracer("shop"));
+Async.run(Tracing.traced(loom, tracer), async -> ...);       // a DetachedEffects stays one: awaits are spans too
+```
+
+A span is named `Effect.Operation` (`Sql.Update`, `Async.Await`), with `okay.effect` and `okay.operation`. An operation
+is data and may hold what must not leave the program, so it is written into its span, `okay.op`, only as a given
+function says. A failure answered to the operation (a failed future at its await) is its span's error; a rest dropped
+ends its span marked `okay.abandoned`. An interceptor put on a traced capability stands outside the tracing: an
+operation it refuses never reaches a handler, and is no span. The parent of a span is the context current at the
+`perform`, as the application's span of a request.
 
 ## The contract
 

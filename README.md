@@ -14,11 +14,13 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), and
 | Module | Artifact | What is in it |
 |---|---|---|
 | `api` | `okay-direct-api` | perform and handle, of no implementation |
-| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Delimited`, `Reflection` on the API |
+| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Async` (structured concurrency, time), `VirtualClock`, `Channel`, `Delimited`, `Reflection` on the API |
 | `tck` | `okay-direct-tck` | what every implementation does: JUnit tests to extend |
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation` |
 | `threads` | `okay-direct-threads` | on virtual threads, portable |
 | `espresso` | `okay-direct-espresso` | on Espresso's continuations: MULTI-SHOT, a `MultiEffects` |
+| `sql` | `okay-direct-sql` | SQL as an effect: statements are operations, `Transaction` their handler; read-only and logged capabilities |
+| `otel` | `okay-direct-otel` | every operation a span of OpenTelemetry, with no change to the program |
 | `interop/scala` | `okay-direct-scala` | the Scala 3 front end, `okay.direct.scala3` |
 | `interop/scala2` | `okay-direct-scala2` | the Scala 2.13 front end, `okay.direct.scala2` |
 | `interop/scala-cats`, `interop/scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2: `await`, `toIO`, `both`/`race`, `use`, `foreach`/`toStream`, cats monads reflected |
@@ -194,6 +196,28 @@ Stream<List<Integer>> triples = Reflection.stream(fx, (Prompt<Stream<List<Intege
 The Scala front ends have both, with a real `Monad[M[_]]` type class: `reify[Option, Int](reflect(Option(1)) +
 reflect(Option(2)))`. A monad whose bind calls the rest at most once is also `Affine` and reifies by `reify` on any
 implementation; any other, a `List`, by `reifyMulti` on a `MultiEffects`: `reify[List, Int]` does not compile.
+
+## Structured concurrency, time, channels
+
+`Async` forks bodies and joins them: `both`, `all`, `race`, `timeout`, each cancelling what is not needed any more —
+a cancelled task unwinds at its await, its `finally` blocks run, and a run ends only after its tasks. Time is the
+handler's: `sleep` and timeouts ask the run's clock, and a `VirtualClock` makes a test of hours of retries run in no
+time, in an order that is always the same. `Channel` is Go's channel between bodies, with `select`; no thread waits:
+
+```java
+var clock = new VirtualClock();
+var winner = Async.run(fx, clock, async -> Async.race(async, List.of(
+    a -> { Async.sleep(a, Duration.ofSeconds(5)); return "slow"; },
+    b -> { Async.sleep(b, Duration.ofSeconds(1)); return "fast"; })));
+clock.advance(Duration.ofSeconds(1));       // "fast"; the slow one cancelled, its finally run
+```
+
+## SQL and tracing
+
+Module `sql`: a statement is an operation, `Transaction.run(fx, db, sql -> ...)` its handler — committed when the body
+returns, rolled back when it fails or when a `Fail` further out drops its rest; `Sql.readOnly` and `Sql.logged` control
+the capability. Module `otel`: `Tracing.traced(fx, tracer)` makes every operation a span of OpenTelemetry, awaits
+included, with no change to the program ([guide](docs/guide.md#sql-a-transaction-is-a-handler)).
 
 ## Cats-effect and ZIO
 
