@@ -32,6 +32,13 @@
           }
         },
         {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-std",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
           "group": "org.scala-lang",
           "module": "scala-library",
           "version": {
@@ -43,11 +50,11 @@
         {
           "name": "okay-direct-scala2-0.1.0.jar",
           "url": "okay-direct-scala2-0.1.0.jar",
-          "size": 85643,
-          "sha512": "8448874311f0b1262b3b7bea8d516d1cf4cb95f019550e04d70a37b12d5d074d8cc4a068df6663da87fe86c4127061213114039568166eb69dcfea211d36f0c2",
-          "sha256": "6b94c3185e7bef02bd6d985684439312f9c1a2309cc53298422271218398eca5",
-          "sha1": "a87d3bad887aafa1ebc416ea1ca631606063bc04",
-          "md5": "8d1f1846d9fa1ea733e11ea278da6083"
+          "size": 116843,
+          "sha512": "35d146f92ba4810e15f9aa1bc60fc9d4418012e15f56ad043d33153c4f1cc29747f22a9fc6fbf43583f4a9942c7cceacf8d2753e189115752b10e22c01b1f24a",
+          "sha256": "2e581ad830465c42ea3cca7d8f53e6b48fa89e4a2859fdbbfe7c224fc147b269",
+          "sha1": "b5fc7559c7a4ce7bb2a927c4bd7926ec22d94c69",
+          "md5": "8b338db5b620235c9935e74dca463784"
         }
       ]
     },
@@ -69,6 +76,13 @@
           }
         },
         {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-std",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
           "group": "org.scala-lang",
           "module": "scala-library",
           "version": {
@@ -80,11 +94,11 @@
         {
           "name": "okay-direct-scala2-0.1.0.jar",
           "url": "okay-direct-scala2-0.1.0.jar",
-          "size": 85643,
-          "sha512": "8448874311f0b1262b3b7bea8d516d1cf4cb95f019550e04d70a37b12d5d074d8cc4a068df6663da87fe86c4127061213114039568166eb69dcfea211d36f0c2",
-          "sha256": "6b94c3185e7bef02bd6d985684439312f9c1a2309cc53298422271218398eca5",
-          "sha1": "a87d3bad887aafa1ebc416ea1ca631606063bc04",
-          "md5": "8d1f1846d9fa1ea733e11ea278da6083"
+          "size": 116843,
+          "sha512": "35d146f92ba4810e15f9aa1bc60fc9d4418012e15f56ad043d33153c4f1cc29747f22a9fc6fbf43583f4a9942c7cceacf8d2753e189115752b10e22c01b1f24a",
+          "sha256": "2e581ad830465c42ea3cca7d8f53e6b48fa89e4a2859fdbbfe7c224fc147b269",
+          "sha1": "b5fc7559c7a4ce7bb2a927c4bd7926ec22d94c69",
+          "md5": "8b338db5b620235c9935e74dca463784"
         }
       ]
     },
@@ -100,11 +114,11 @@
         {
           "name": "okay-direct-scala2-0.1.0-sources.jar",
           "url": "okay-direct-scala2-0.1.0-sources.jar",
-          "size": 6345,
-          "sha512": "8c2194e66d211cdfd11f98b4d26bd33e1fca8951a4b96855c00681f990bb28d878d6e4048d76913a5ed7fc5ff7daaf85e289b11521d0fd844c7e5f7347f01416",
-          "sha256": "0f2cd4694005e7d434fd91aabd5452a11976140420ccc4b98a6454becae6f019",
-          "sha1": "857bc92fc025394306658b87f240fa3eac0d4c65",
-          "md5": "d812a1d4e8f50a2bef08599da122cc93"
+          "size": 10128,
+          "sha512": "ac97c011b318f195512eb90cb1f675cd4bc7f50640c5d78be339f15c7473dac7d4786aa2e3dc00b9fb24964114c6cdd12792dc22cb1d3727854fd5b789dce673",
+          "sha256": "ccc5cac31b6cd98e8b717fa04e8591269c94b2472479c1b723e9830987c89df4",
+          "sha1": "5ffea64e85599a3b6870facfa9e0e6e37b0b7831",
+          "md5": "5192b63a60a7233cb961741df2b44c5a"
         }
       ]
     }

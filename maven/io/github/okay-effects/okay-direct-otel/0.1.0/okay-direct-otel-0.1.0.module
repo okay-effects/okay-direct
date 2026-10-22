@@ -1,0 +1,112 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-otel",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "io.opentelemetry",
+          "module": "opentelemetry-api",
+          "version": {
+            "requires": "1.67.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-otel-0.1.0.jar",
+          "url": "okay-direct-otel-0.1.0.jar",
+          "size": 3402,
+          "sha512": "ff3c37dbb62ae615e03c0864cc365ff8825690f6e9940bbeb14ceebb7f271d89a73d89fd675aa3d611db596f91f7893f538d2a88d4928ebf60d49242dd01023c",
+          "sha256": "860eafc1fd2368df79ade71a1f269afe9c31b250645481900e3e4a645ac4dc71",
+          "sha1": "a522f4e08bd04923c66150a826f1b0cc96d068e2",
+          "md5": "8cda964bc28e4dcefd62795929fecfa1"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "io.opentelemetry",
+          "module": "opentelemetry-api",
+          "version": {
+            "requires": "1.67.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-otel-0.1.0.jar",
+          "url": "okay-direct-otel-0.1.0.jar",
+          "size": 3402,
+          "sha512": "ff3c37dbb62ae615e03c0864cc365ff8825690f6e9940bbeb14ceebb7f271d89a73d89fd675aa3d611db596f91f7893f538d2a88d4928ebf60d49242dd01023c",
+          "sha256": "860eafc1fd2368df79ade71a1f269afe9c31b250645481900e3e4a645ac4dc71",
+          "sha1": "a522f4e08bd04923c66150a826f1b0cc96d068e2",
+          "md5": "8cda964bc28e4dcefd62795929fecfa1"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-otel-0.1.0-sources.jar",
+          "url": "okay-direct-otel-0.1.0-sources.jar",
+          "size": 1948,
+          "sha512": "974f531bd39c5bd66110c14d96fdf61316b9cb7b0f96edba0595fcfab9738425375f63ee02b2432478b70766f58a6aac406ec033f2f92fe8c6907b0fe89754ef",
+          "sha256": "cc852510d4526de4adf19a20b7cec5d8b4a9a016029c87bf8c41d02415f6c3c4",
+          "sha1": "069253cfcd950004e8c5e552d5566f235a192c0e",
+          "md5": "adfb51304e63db2faf0d68e7f0caf729"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-sql",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-std",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-sql-0.1.0.jar",
+          "url": "okay-direct-sql-0.1.0.jar",
+          "size": 12459,
+          "sha512": "6bd20873a5b998bbd72bc5d56aa60a5c608175071107238f840523d2dc09ed9bd369b866cbd4ee8c54ba0e64570aace8f2a39057c9c5de666c65af2e11fbcdda",
+          "sha256": "572051841830198bf7fb2cffc32e14657df33fddc8965ae5d27fdd5644b048ac",
+          "sha1": "99fd362e1d180fc9dc5443ccb4984a98a9d30dc9",
+          "md5": "052d7c24eef3dd74573862a1d13c4ded"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-std",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-sql-0.1.0.jar",
+          "url": "okay-direct-sql-0.1.0.jar",
+          "size": 12459,
+          "sha512": "6bd20873a5b998bbd72bc5d56aa60a5c608175071107238f840523d2dc09ed9bd369b866cbd4ee8c54ba0e64570aace8f2a39057c9c5de666c65af2e11fbcdda",
+          "sha256": "572051841830198bf7fb2cffc32e14657df33fddc8965ae5d27fdd5644b048ac",
+          "sha1": "99fd362e1d180fc9dc5443ccb4984a98a9d30dc9",
+          "md5": "052d7c24eef3dd74573862a1d13c4ded"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-sql-0.1.0-sources.jar",
+          "url": "okay-direct-sql-0.1.0-sources.jar",
+          "size": 3339,
+          "sha512": "5d8caa4d647efd34f1a2fa4db51ff9c67d28f65232aa15d59e1081e45abc567689a820a18545f3db015c5183753a43f94e416c3003de74c765ecc4d4df84d927",
+          "sha256": "899408aaed0b00262982958512c918041a0c44a64d6d3004dbf00af14cb7ecdb",
+          "sha1": "064a099a5babe7787a873d17b8a68e32106c42e6",
+          "md5": "eaef6b8c3dfe0672c981a3d8ddd675a3"
+        }
+      ]
+    }
+  ]
+}
