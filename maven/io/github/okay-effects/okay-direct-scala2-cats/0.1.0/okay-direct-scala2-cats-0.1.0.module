@@ -1,0 +1,126 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-scala2-cats",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-scala2",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "org.typelevel",
+          "module": "cats-effect_2.13",
+          "version": {
+            "requires": "3.7.1"
+          }
+        },
+        {
+          "group": "co.fs2",
+          "module": "fs2-core_2.13",
+          "version": {
+            "requires": "3.14.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-scala2-cats-0.1.0.jar",
+          "url": "okay-direct-scala2-cats-0.1.0.jar",
+          "size": 27963,
+          "sha512": "23bea61c24944e0eddd7a49f137266e0c199d709af2eb917d386bbcead8d2fdf04ffc920b695793204730402f5af4b4e7760df8bc51fd79de55616ce7094fbec",
+          "sha256": "e15caff89952efe8d8f7249ac27a7fb088559e692bcbec0f52462aef22f5aae8",
+          "sha1": "5a141156223edc49a4a24792a506e0cc757ad766",
+          "md5": "9821f23550833473ecf46e5c31d63354"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-scala2",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "org.typelevel",
+          "module": "cats-effect_2.13",
+          "version": {
+            "requires": "3.7.1"
+          }
+        },
+        {
+          "group": "co.fs2",
+          "module": "fs2-core_2.13",
+          "version": {
+            "requires": "3.14.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-scala2-cats-0.1.0.jar",
+          "url": "okay-direct-scala2-cats-0.1.0.jar",
+          "size": 27963,
+          "sha512": "23bea61c24944e0eddd7a49f137266e0c199d709af2eb917d386bbcead8d2fdf04ffc920b695793204730402f5af4b4e7760df8bc51fd79de55616ce7094fbec",
+          "sha256": "e15caff89952efe8d8f7249ac27a7fb088559e692bcbec0f52462aef22f5aae8",
+          "sha1": "5a141156223edc49a4a24792a506e0cc757ad766",
+          "md5": "9821f23550833473ecf46e5c31d63354"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-scala2-cats-0.1.0-sources.jar",
+          "url": "okay-direct-scala2-cats-0.1.0-sources.jar",
+          "size": 2888,
+          "sha512": "36808b27d36b9ee33e9a601fee8a89ef9cd2c03a08399bd66271bc8291958674ebdee33454b78ddd1de2ceb97df634dfd0226f98951faba50987fd4f424fc338",
+          "sha256": "2ed8f73032c8fa57c8596d27da813962a35d8720786de95319aedf3d839aa338",
+          "sha1": "c1db7da870a1f311132b467fa70018b433ead782",
+          "md5": "ed46f666dea2d59f31db95bc39a10353"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-espresso",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-espresso-0.1.0.jar",
+          "url": "okay-direct-espresso-0.1.0.jar",
+          "size": 41084,
+          "sha512": "670400f3c7f3e288a52bef6d47ced51f84bcbdbb1024c0ecb2f92c2835add8c0c591bdd51c26c26fce7bdf7c0d0c70da5072e3476a677710aed162e0cc569d3b",
+          "sha256": "d03b8abbeb053e0424ab6acef813eb04564363b2d7527eb3489aaa90f0b86c00",
+          "sha1": "afc20f0af8e8328c44af9c8b7047865ebd836f4e",
+          "md5": "ef173560322dc87c1d4a1a8066f93bdf"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-espresso-0.1.0.jar",
+          "url": "okay-direct-espresso-0.1.0.jar",
+          "size": 41084,
+          "sha512": "670400f3c7f3e288a52bef6d47ced51f84bcbdbb1024c0ecb2f92c2835add8c0c591bdd51c26c26fce7bdf7c0d0c70da5072e3476a677710aed162e0cc569d3b",
+          "sha256": "d03b8abbeb053e0424ab6acef813eb04564363b2d7527eb3489aaa90f0b86c00",
+          "sha1": "afc20f0af8e8328c44af9c8b7047865ebd836f4e",
+          "md5": "ef173560322dc87c1d4a1a8066f93bdf"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-espresso-0.1.0-sources.jar",
+          "url": "okay-direct-espresso-0.1.0-sources.jar",
+          "size": 10106,
+          "sha512": "3fc70f378602179c0674b99774e90f14ccd2695aba3ae949177fb52579a98d4226d8ca179d3e57f0f0a60087ac67e2fdc77d4ae73cbd5fd18b63d476f4281dce",
+          "sha256": "7ad99d9452afa9e32416ca508c9664fed2d9c01b99db4be9b4eb30eea8c624b4",
+          "sha1": "dd58e4bcfa31393cf2b7c0a2eba9309acfcce0d0",
+          "md5": "e9da8c8ee41bc25d96482915276b38c9"
+        }
+      ]
+    }
+  ]
+}

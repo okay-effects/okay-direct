@@ -1,0 +1,98 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-threads",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-threads-0.1.0.jar",
+          "url": "okay-direct-threads-0.1.0.jar",
+          "size": 10137,
+          "sha512": "c928437b569ecd633b0c0a4f7f3d95e969ef3fb356b5f29af31a1ce3bcd6576ee26748d8a1de9713eefc73a25d865cce43927427f649338a288c392fb78f5d67",
+          "sha256": "acd890a6e97f702a76817b9ec679be881be57bdd6662345ee9e6eea7399469b6",
+          "sha1": "66df32e0fef6d766c515e985f22bbdca46d0c4a2",
+          "md5": "1451e101dce9e876fc5d621299df130e"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-threads-0.1.0.jar",
+          "url": "okay-direct-threads-0.1.0.jar",
+          "size": 10137,
+          "sha512": "c928437b569ecd633b0c0a4f7f3d95e969ef3fb356b5f29af31a1ce3bcd6576ee26748d8a1de9713eefc73a25d865cce43927427f649338a288c392fb78f5d67",
+          "sha256": "acd890a6e97f702a76817b9ec679be881be57bdd6662345ee9e6eea7399469b6",
+          "sha1": "66df32e0fef6d766c515e985f22bbdca46d0c4a2",
+          "md5": "1451e101dce9e876fc5d621299df130e"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-threads-0.1.0-sources.jar",
+          "url": "okay-direct-threads-0.1.0-sources.jar",
+          "size": 2706,
+          "sha512": "f1eeae6aefe872b2aca50b198076dd6a68ce26b903270d4075af3af06b75135586b2e23784c07153599a445255055882cc22dd312b46977f07598f9ca4f83ef3",
+          "sha256": "9311d8b88cc262a24c45ee0d406c438b317b0b149dbcc1dfd050d0a55bb4bed1",
+          "sha1": "93c659f938e26b1cea40191b603f8c75e57ee11f",
+          "md5": "77b4e76f5acd2ad31db329ff530b8a02"
+        }
+      ]
+    }
+  ]
+}

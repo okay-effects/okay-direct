@@ -1,0 +1,126 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-scala-zio",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-scala",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "dev.zio",
+          "module": "zio_3",
+          "version": {
+            "requires": "2.1.27"
+          }
+        },
+        {
+          "group": "dev.zio",
+          "module": "zio-streams_3",
+          "version": {
+            "requires": "2.1.27"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-scala-zio-0.1.0.jar",
+          "url": "okay-direct-scala-zio-0.1.0.jar",
+          "size": 41847,
+          "sha512": "e2b99f50eb9535b2ee3097a854824809e763195fa0eef93f3d97e71fe7a795eac4703a3543e4ec4ce5e9418998f8525ba6e854a13ff45253b9ed7dcd8f2b5400",
+          "sha256": "decea19e25ac1d48cc2ec4b6a6989555e43f9c9b1d1fc2d9b9be79e9be498ca6",
+          "sha1": "93874a2a22ceeb9a6bf08736682bc4f37b829edb",
+          "md5": "3401eb5b2a0939f3ac15ff20d4228b62"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-scala",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "dev.zio",
+          "module": "zio_3",
+          "version": {
+            "requires": "2.1.27"
+          }
+        },
+        {
+          "group": "dev.zio",
+          "module": "zio-streams_3",
+          "version": {
+            "requires": "2.1.27"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-scala-zio-0.1.0.jar",
+          "url": "okay-direct-scala-zio-0.1.0.jar",
+          "size": 41847,
+          "sha512": "e2b99f50eb9535b2ee3097a854824809e763195fa0eef93f3d97e71fe7a795eac4703a3543e4ec4ce5e9418998f8525ba6e854a13ff45253b9ed7dcd8f2b5400",
+          "sha256": "decea19e25ac1d48cc2ec4b6a6989555e43f9c9b1d1fc2d9b9be79e9be498ca6",
+          "sha1": "93874a2a22ceeb9a6bf08736682bc4f37b829edb",
+          "md5": "3401eb5b2a0939f3ac15ff20d4228b62"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-scala-zio-0.1.0-sources.jar",
+          "url": "okay-direct-scala-zio-0.1.0-sources.jar",
+          "size": 2928,
+          "sha512": "52cf0a5af2d7e604e4f686dc45f307fa07128a0636fd1b5e6daa3c651efab0553782c8c57c954835b1449ddc595193928eac537a7fd72aa97b75bbd6e3c32dfb",
+          "sha256": "415c77ce3b40ac5b6e739841dc07658a7238f7ac0443ced4e88916459b14cc8d",
+          "sha1": "50cd904876d34b6c4f31d51f80d3c6e81edb2862",
+          "md5": "cd34068019eb02b6c3ce43257471767d"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-std",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-std-0.1.0.jar",
+          "url": "okay-direct-std-0.1.0.jar",
+          "size": 29600,
+          "sha512": "1bb93b5d0e447a0ac88148bc2b2bbff20d2bfe1670c78d3ff089d32ee265d61c9b98fdefe6447537c9478c0adefd0131c6b3665de035a0fdb7b8f3c8aa52c673",
+          "sha256": "aa514eb6709fccaeb8ae6cf6808ec29513db78b565a1853edbe3de55fc310a57",
+          "sha1": "6f7f993049e0373ef471105df28205adbf027b5f",
+          "md5": "20898e8aeeb60776054b62968ec81ec6"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-std-0.1.0.jar",
+          "url": "okay-direct-std-0.1.0.jar",
+          "size": 29600,
+          "sha512": "1bb93b5d0e447a0ac88148bc2b2bbff20d2bfe1670c78d3ff089d32ee265d61c9b98fdefe6447537c9478c0adefd0131c6b3665de035a0fdb7b8f3c8aa52c673",
+          "sha256": "aa514eb6709fccaeb8ae6cf6808ec29513db78b565a1853edbe3de55fc310a57",
+          "sha1": "6f7f993049e0373ef471105df28205adbf027b5f",
+          "md5": "20898e8aeeb60776054b62968ec81ec6"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-std-0.1.0-sources.jar",
+          "url": "okay-direct-std-0.1.0-sources.jar",
+          "size": 6708,
+          "sha512": "01b414168917b889a1d6415c224ca5e4fdf57860af3a759304cb5c98384f0ce800a2f98f746b31879af38b41a92438f069b44de79ee73f878fd4ddef7b65ac3d",
+          "sha256": "2530270cf13aa26989013b5715c4c09f0bc793c4b2f6d357bb8012ce4ea14d22",
+          "sha1": "a3304dd4a5930402f060a73261882ab72883acb9",
+          "md5": "a190e1b2a4ce9a0b8d291936a75d877e"
+        }
+      ]
+    }
+  ]
+}

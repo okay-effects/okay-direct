@@ -1,0 +1,112 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-scala",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "org.scala-lang",
+          "module": "scala3-library_3",
+          "version": {
+            "requires": "3.9.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-scala-0.1.0.jar",
+          "url": "okay-direct-scala-0.1.0.jar",
+          "size": 119987,
+          "sha512": "bf2904ea296c8de7a9d66cb4b665a750fe3457a9bef278573905c8fd937166bbe1d1bdd1dee47a04f5b7f8a6959b5f253a83daae5008f565c27e76b234c484ad",
+          "sha256": "ebc407bb6709e8de83d57aaac6c144eac5183d75733fa657aa8e2f053f95acd0",
+          "sha1": "8b73a7579724ce6532031dbd95d52460c279ee18",
+          "md5": "f7648c8570dbaf0323afe1923168b701"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-api",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "org.scala-lang",
+          "module": "scala3-library_3",
+          "version": {
+            "requires": "3.9.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-scala-0.1.0.jar",
+          "url": "okay-direct-scala-0.1.0.jar",
+          "size": 119987,
+          "sha512": "bf2904ea296c8de7a9d66cb4b665a750fe3457a9bef278573905c8fd937166bbe1d1bdd1dee47a04f5b7f8a6959b5f253a83daae5008f565c27e76b234c484ad",
+          "sha256": "ebc407bb6709e8de83d57aaac6c144eac5183d75733fa657aa8e2f053f95acd0",
+          "sha1": "8b73a7579724ce6532031dbd95d52460c279ee18",
+          "md5": "f7648c8570dbaf0323afe1923168b701"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-scala-0.1.0-sources.jar",
+          "url": "okay-direct-scala-0.1.0-sources.jar",
+          "size": 5893,
+          "sha512": "f1b625b121f55c05278e2c384a722b7d8dfda25eb81e18c5d22176fa6cc96749da310fef2d0873a31c84f7678cae3896859ed389c2b4563874b18f6f15647918",
+          "sha256": "17df917754eea112c071dc9a176e6d83dc5741dcd1a9a829998ae1321d0d3876",
+          "sha1": "0fcf4c3df60394344cc621b2a1195c9ffde4110e",
+          "md5": "17c214d0656771e2760e3f072b39d7ef"
+        }
+      ]
+    }
+  ]
+}

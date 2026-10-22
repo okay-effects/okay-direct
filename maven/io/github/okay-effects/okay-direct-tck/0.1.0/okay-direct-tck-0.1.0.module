@@ -1,0 +1,128 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.okay-effects",
+    "module": "okay-direct-tck",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.1.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-std",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "org.junit",
+          "module": "junit-bom",
+          "version": {
+            "requires": "5.13.4"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "org.junit.jupiter",
+          "module": "junit-jupiter"
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-tck-0.1.0.jar",
+          "url": "okay-direct-tck-0.1.0.jar",
+          "size": 38491,
+          "sha512": "0d5c288f38d57c4d1453c11c10a695b2d84c52107f07277d562da12c35837099a8469da1667faa73f92f07b104bf382a0c54e6024eda7d7cb056e0e24d9c8435",
+          "sha256": "a1fefbe7c97bcf914bf9fb8b74f74f9bb26381997fcc84da30522a242fbdc78b",
+          "sha1": "142928b035eb86bccaf32557f3f767aabf651e44",
+          "md5": "c71e95bb9e937ad984d57406d27b460e"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 25,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "io.github.okay-effects",
+          "module": "okay-direct-std",
+          "version": {
+            "requires": "0.1.0"
+          }
+        },
+        {
+          "group": "org.junit",
+          "module": "junit-bom",
+          "version": {
+            "requires": "5.13.4"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          },
+          "endorseStrictVersions": true
+        },
+        {
+          "group": "org.junit.jupiter",
+          "module": "junit-jupiter"
+        }
+      ],
+      "files": [
+        {
+          "name": "okay-direct-tck-0.1.0.jar",
+          "url": "okay-direct-tck-0.1.0.jar",
+          "size": 38491,
+          "sha512": "0d5c288f38d57c4d1453c11c10a695b2d84c52107f07277d562da12c35837099a8469da1667faa73f92f07b104bf382a0c54e6024eda7d7cb056e0e24d9c8435",
+          "sha256": "a1fefbe7c97bcf914bf9fb8b74f74f9bb26381997fcc84da30522a242fbdc78b",
+          "sha1": "142928b035eb86bccaf32557f3f767aabf651e44",
+          "md5": "c71e95bb9e937ad984d57406d27b460e"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "okay-direct-tck-0.1.0-sources.jar",
+          "url": "okay-direct-tck-0.1.0-sources.jar",
+          "size": 9599,
+          "sha512": "c65c7a700605e3718f4f9c83bcb528999a385c1d736455ee0a93c2c2fdc1a2fe14e6df1f6bb7633f7fce73ad41fb04ca36276805c580fabcb79692b50d203f53",
+          "sha256": "9e075898db5ba365624c1d3fba975a32b6f4f3353fb08a412d386b8459dc7c72",
+          "sha1": "06e861a0b5ca839e73770d9babed7cc5b1458253",
+          "md5": "bff7e613b553f070c304f1715d21ec73"
+        }
+      ]
+    }
+  ]
+}
