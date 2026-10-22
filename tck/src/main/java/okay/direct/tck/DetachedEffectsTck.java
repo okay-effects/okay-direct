@@ -26,7 +26,7 @@ import okay.direct.std.Fail;
 import org.junit.jupiter.api.Test;
 
 /** What an implementation with detached continuations does too: a rest resumed after its clause, from anywhere. */
-public abstract class DetachedEffectsTck extends EffectsTck {
+public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTests, ChannelTests {
     @Override
     public abstract DetachedEffects effects();
 
