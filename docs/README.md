@@ -19,7 +19,7 @@ The [README](../README.md) is the short tour.
 | Module | Artifact | |
 |---|---|---|
 | `api` | `okay-direct-api` | the interfaces: perform and handle, of no implementation |
-| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Delimited`, `Reflection` |
+| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Delimited`, `Reflection` |
 | `tck` | `okay-direct-tck` | what every implementation does, as JUnit tests to extend |
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation`; one-shot |
 | `threads` | `okay-direct-threads` | a virtual thread per body; one-shot; portable |

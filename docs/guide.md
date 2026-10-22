@@ -13,9 +13,10 @@ Everything here is in `okay.direct` (the API, module `api`) and `okay.direct.std
 7. [The standard effects](#the-standard-effects)
 8. [Implicit capabilities](#implicit-capabilities)
 9. [Control and audit](#control-and-audit)
-10. [Delimited continuations](#delimited-continuations)
-11. [Monadic reflection](#monadic-reflection)
-12. [The contract](#the-contract)
+10. [Generators: streams on any JDK](#generators-streams-on-any-jdk)
+11. [Delimited continuations](#delimited-continuations)
+12. [Monadic reflection](#monadic-reflection)
+13. [The contract](#the-contract)
 
 ## Effects and operations
 
@@ -174,6 +175,7 @@ propagate out of `handle` as they are.
 | `Fail<E>` | `raise` (answered by any type: never resumed) | `Fail.attempt(fx, body)`: `Fail.Success` or `Fail.Failure` |
 | `Choose` | `flip` | `Choose.all(multiFx, body)`: every way, multi-shot |
 | `Trail` | `record(line)` | `Trail.keep(fx, body)`: the lines and the value, `Trail.Kept` |
+| `Emits<A>` | `emit(value)` | `Emits.collect(fx, body)`: a list; `Emits.stream(fx, body)`: a lazy `Stream` |
 
 plus `Delimited` and `Reflection`, below.
 
@@ -272,6 +274,31 @@ Effects watched = Observer.watch(fx, new Observer() {
 // State Get[]  → 1, Reader Ask[]  → 5, State Put[value=6]  → null, Pay Transfer[to=acct, amount=6]  → ok:acct:6
 ```
 
+## Generators: streams on any JDK
+
+A generator is a body in direct style that emits values: its loops do the enumerating, the effect `Emits` only gives the
+values out. One resumption per value is enough, so it runs on every implementation — on an ordinary JDK, by Loom or
+threads:
+
+```java
+Stream<List<Integer>> triples = Emits.stream(fx, out -> {
+    for (int a = 1; a <= 10; a++)
+        for (int b = a; b <= 10; b++)
+            for (int c = b; c <= 15; c++)
+                if (a * a + b * b == c * c) Emits.emit(out, List.of(a, b, c));
+});   // [3, 4, 5], [6, 8, 10]
+```
+
+- `Emits.collect(fx, body)` runs the body to its end, here, and gives the list of what it emitted.
+- `Emits.stream(fx, body)` is LAZY: the body runs as the stream is pulled, each `emit` waiting until its value is
+  taken, so a stream that stops early (`findFirst`, `limit`) stops it, and an endless generator is fine. The body runs
+  on a virtual thread of its own, so it has the capabilities it is given there, not those of the code making the
+  stream. Closed, the stream drops the body's rest, which unwinds (`finally` runs); left unclosed, the body is stopped
+  when the stream is collected. A failure of the body is thrown where the stream is pulled.
+
+The other way to the same triples is [monadic reflection of streams](#monadic-reflection): there `each` forks the
+rest of the body for every element, which needs multi-shot continuations, so Espresso. A generator needs neither.
+
 ## Delimited continuations
 
 `std.Delimited` is `shift0` and `reset0` (Materzok and Biernacki) on the API: a reset is a handler, its prompt the
@@ -319,7 +346,7 @@ Stream<List<Integer>> triples = Reflection.stream(espresso, (Prompt<Stream<List<
 });   // [3, 4, 5], [6, 8, 10]
 ```
 
-`each`'s bind is EAGER: it resumes the rest for every element while its clause runs, then joins the streams —
+On an ordinary JDK, write the same as a [generator](#generators-streams-on-any-jdk). `each`'s bind is EAGER: it resumes the rest for every element while its clause runs, then joins the streams —
 `Stream.flatMap` would resume it later, when the stream is consumed, after the continuation has ended. For the same
 reason a lazy monad (a future, an IO, a state function) cannot be reflected: its bind calls the rest after `reflect`
 has returned. Await it instead ([Scala](scala.md#cats-effect)).

@@ -114,6 +114,7 @@ class LoomEffectsTest extends EffectsTck {
 | `EffectsTck` | handlers nested in any order; operations passing inner handlers; operations in lambdas and across functions; clauses outside their bodies; a general handler wrapping the rest; a dropped rest unwinding, `finally` and all; one-shot refused twice; capabilities confined (after the handler, another thread, the own clause); checked exceptions through `handle`; errors; constant stack; a virtual thread; implicit capabilities | 18 |
 | `InterceptorTests` | an interceptor changing a plain effect; the audit of payments; a hand-written handler of a sensitive effect unable to answer; an audited capability not outliving its audit; the observer telling and refusing; a dropped rest unwinding through inner handlers; a throwing tail clause | 8 |
 | `DelimitedTests` | `shift0`; a dropped rest; an outer prompt through an inner reset; the reset's own prompt refused in a `shift0`'s body; one-shot refused twice; reflection of `Optional`, with other effects | 7 |
+| `EmitsTests` | a generator collected; a generator as a lazy stream, pulled only as far as needed; a closed stream stopping its body, which unwinds; a failure of the body thrown by the stream | 4 |
 | `MultiEffectsTck` | `Choose`; each branch's locals and one heap; a state inside a choice, and outside; a failure per branch; an outer choice forking an inner one; a multi-shot `k`; reflection of lists and streams; Pythagorean triples | 11 |
 
 The nested choice's eight results were checked against an independent freer monad.

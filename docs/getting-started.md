@@ -246,7 +246,9 @@ List<List<Boolean>> all = Choose.all(fx, choose -> List.of(Choose.flip(choose), 
 // [[true, true], [true, false], [false, true], [false, false]]
 ```
 
-On Loom or threads `Choose.all` does not compile: they are not `MultiEffects`.
+On Loom or threads `Choose.all` does not compile: they are not `MultiEffects`. Enumerating with plain loops and giving
+the results out by a generator, `Emits.stream(fx, out -> ...)`, needs no multi-shot continuation and runs on any JDK
+([Guide](guide.md#generators-streams-on-any-jdk)).
 
 ## Where to go next
 

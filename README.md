@@ -14,7 +14,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), and
 | Module | Artifact | What is in it |
 |---|---|---|
 | `api` | `okay-direct-api` | perform and handle, of no implementation |
-| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose` on the API |
+| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Delimited`, `Reflection` on the API |
 | `tck` | `okay-direct-tck` | what every implementation does: JUnit tests to extend |
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation` |
 | `threads` | `okay-direct-threads` | on virtual threads, portable |
@@ -106,7 +106,9 @@ Optional<Integer> sum = Reflection.reify(fx, Optional::of,
     (Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));
 ```
 
-`Reflection.stream(fx, p -> ...)` and `Reflection.each(p, stream)` reflect Java's streams, multi-shot: the bind is
+`Emits.stream(fx, out -> ...)` is a generator: plain loops enumerate, `Emits.emit` gives values out, the result a lazy
+`Stream` — one-shot, so on any JDK. `Reflection.stream(fx, p -> ...)` and `Reflection.each(p, stream)` reflect Java's
+streams instead, multi-shot: the bind is
 eager, the rest resumed for each element while the clause runs, as `Stream.flatMap` would resume it only when the
 stream is consumed. `Reflection.none(p)` drops a way:
 
