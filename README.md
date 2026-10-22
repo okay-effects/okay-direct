@@ -21,8 +21,8 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), and
 | `espresso` | `okay-direct-espresso` | on Espresso's continuations: MULTI-SHOT, a `MultiEffects` |
 | `sql` | `okay-direct-sql` | SQL as an effect: statements are operations, `Transaction` their handler; read-only and logged capabilities |
 | `otel` | `okay-direct-otel` | every operation a span of OpenTelemetry, with no change to the program |
-| `interop/scala` | `okay-direct-scala` | the Scala 3 front end, `okay.direct.scala3` |
-| `interop/scala2` | `okay-direct-scala2` | the Scala 2.13 front end, `okay.direct.scala2` |
+| `interop/scala` | `okay-direct-scala` | the Scala 3 front end, `okay.direct.scala3`: effects, handlers, reflection, `Async`, `Channel`, `Sql` |
+| `interop/scala2` | `okay-direct-scala2` | the Scala 2.13 front end, `okay.direct.scala2`: the same |
 | `interop/scala-cats`, `interop/scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2: `await`, `toIO`, `both`/`race`, `use`, `foreach`/`toStream`, cats monads reflected |
 | `interop/scala-zio`, `interop/scala2-zio` | `okay-direct-scala-zio`, `okay-direct-scala2-zio` | ZIO and ZStream: its channels the effects, `fromZIO`/`toZIO`, `both`/`race`, `scoped`/`withLayer`, `foreach`/`toStream` |
 
@@ -323,6 +323,10 @@ Reader.run(42) { implicit r => State.run(0) { implicit s => Fail.attempt[String,
 Control and audit in Scala 2 (`Control._`): `intercept`, `handleSensitive`, `audit`, `observe`, `Trail`; a clause
 answers through `k`: `case t: Transfer => k(t, pass(t))`. An inner capability hides an outer one of the same type
 only under the same name: Scala 2 does not prefer the more deeply nested implicit.
+
+Both front ends have `Async` (structured concurrency, a clock given), `Channel` with `select`, `VirtualClock`, the
+either and writer monads reflected, and `Sql` with `Transaction` — in Scala 3 a forked body is a context function whose
+own capability is the innermost given ([docs/scala.md](docs/scala.md#structured-concurrency-time-channels)).
 
 ## Implementations
 

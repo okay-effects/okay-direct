@@ -49,6 +49,11 @@ trait Affine[M[_]]
 
 object Affine:
   given Affine[Option] = Monad.OptionMonad
+  given either[E]: Affine[[A] =>> Either[E, A]] = new Affine[[A] =>> Either[E, A]] {}
+  given written[W]: Affine[[A] =>> Written[W, A]] = new Affine[[A] =>> Written[W, A]] {}
+
+/** A value with what was written on the way to it: the writer monad's. */
+final case class Written[W, A](value: A, log: List[W])
 
 object Monad:
   object OptionMonad extends Monad[Option], Affine[Option]:
@@ -59,6 +64,16 @@ object Monad:
   given Monad[List] with
     def pure[A](a: A) = List(a)
     def flatMap[A, B](m: List[A])(f: A => List[B]) = m.flatMap(f)
+
+  given either[E]: Monad[[A] =>> Either[E, A]] with
+    def pure[A](a: A) = Right(a)
+    def flatMap[A, B](m: Either[E, A])(f: A => Either[E, B]) = m.flatMap(f)
+
+  given written[W]: Monad[[A] =>> Written[W, A]] with
+    def pure[A](a: A) = Written(a, Nil)
+    def flatMap[A, B](m: Written[W, A])(f: A => Written[W, B]) =
+      val rest = f(m.value)
+      Written(rest.value, m.log ++ rest.log)
 
 /** The capability to reflect values of the monad M, in a reify's body. */
 trait Reflect[M[_]]:
@@ -77,3 +92,14 @@ def reify[M[_], R](body: Reflect[M] ?=> R)(using monad: Monad[M], affine: Affine
 /** The body's computation reified, of any monad: on a multi-shot implementation. */
 def reifyMulti[M[_], R](body: Reflect[M] ?=> R)(using monad: Monad[M], fx: MultiEffects): M[R] =
   resetMulti[M[R]](monad.pure(body(using reflecting(summon[Prompt[M[R]]], monad))))
+
+/** The either monad's computation in direct style: a `Left` reflected is the result, the rest not run. */
+def either[E, R](body: Reflect[[A] =>> Either[E, A]] ?=> R)(using Effects): Either[E, R] =
+  reify[[A] =>> Either[E, A], R](body)
+
+/** The writer monad's computation in direct style: the value, with all that was written, in order. */
+def written[W, R](body: Reflect[[A] =>> Written[W, A]] ?=> R)(using Effects): Written[W, R] =
+  reify[[A] =>> Written[W, A], R](body)
+
+/** `entry` written, under [[written]]. */
+def tell[W](entry: W)(using reflect: Reflect[[A] =>> Written[W, A]]): Unit = reflect(Written((), List(entry)))

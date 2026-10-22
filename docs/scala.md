@@ -15,9 +15,11 @@ interop live in `interop/`:
 2. [Scala 2.13](#scala-213)
 3. [Control and audit](#control-and-audit)
 4. [Delimited continuations and monadic reflection](#delimited-continuations-and-monadic-reflection)
-5. [Cats-effect](#cats-effect)
-6. [ZIO](#zio)
-7. [What the interop does not do](#what-the-interop-does-not-do)
+5. [Structured concurrency, time, channels](#structured-concurrency-time-channels)
+6. [SQL and tracing](#sql-and-tracing)
+7. [Cats-effect](#cats-effect)
+8. [ZIO](#zio)
+9. [What the interop does not do](#what-the-interop-does-not-do)
 
 ## Scala 3
 
@@ -122,8 +124,70 @@ A monad whose bind calls the rest at most once is also `Affine` (`Option` is; `L
 `Affine[M]`, `reifyMulti` for a `MultiEffects`. So `reify[List, Int]` does not compile — the number of shots is a type
 here too. Scala 2: `Delimited._`, the prompt and the reflection capability passed as implicit lambda parameters.
 
+`Either` and a writer, `Written[W, A]` (a value and its log), are affine monads given too, with their own reifies:
+
+```scala
+either[String, Int](reflect(parse("40")) + reflect(parse("2")))         // Right(42); "4o": Left(not a number: 4o)
+written[String, Int] { tell("start"); (1 to 3).map(i => reflect(step(i))).sum }
+                                                    // Written(60, List(start, step 1, step 2, step 3))
+```
+
+Scala 2 has no type lambdas without a plugin, so its `Delimited.either` and `Delimited.written` give the capability
+as a function, `r(m)` reflecting: `Delimited.either[String, Int](r => r(parse("40")) + r(parse("2")))`.
+
 Scala 3 builds `List(flip, flip)`'s varargs array before the flips and fills it after: under a multi-shot handler every
 branch fills that one array. Bind multi-shot answers to locals first: `val a = flip; val b = flip; List(a, b)`.
+
+## Structured concurrency, time, channels
+
+Both front ends wrap the Java `std.Async` and `std.Channel`: the same tasks, cancellation and clocks, on a
+`DetachedEffects` given (Loom's or threads'). The capability `Effect[Async]` is a context parameter; a forked body is
+a context function, its own capability the innermost given, so its awaits use it with nothing written:
+
+```scala
+given DetachedEffects = LoomEffects()
+given clock: VirtualClock = VirtualClock()         // the run's time; the system's when none is given
+
+val result = Async.run:
+  val (a, b) = Async.both({ Async.sleep(10.seconds); "a" }, { Async.sleep(20.seconds); "b" })
+  val first = Async.race({ Async.sleep(5.seconds); "slow" }, { Async.sleep(1.second); "fast" })
+  val inTime = Async.timeout(2.seconds) { Async.sleep(1.second); 7 }      // Some(7)
+  (a, b, first, inTime)
+clock.run()                                        // 20 seconds of virtual time, at once
+```
+
+`fork`/`join`, `all`, `sleep`, `timer`, `now` too; durations are Scala's. A [`Channel`](guide.md#channels-and-select)
+sends and receives with the capability in scope, its `iterator` ends when it is closed, and `select` takes cases:
+
+```scala
+val numbers = Channel[Int]()
+Async.run:
+  Async.both({ for i <- 1 to 100 do numbers.send(i); numbers.close() }, numbers.iterator.sum)._2   // 5050
+
+Channel.select(orders.received(o => s"order $o"), cancels.received(id => s"cancel $id"),
+  Channel.timeout(5.seconds)("idle"))
+```
+
+Scala 2 is the same with implicits; a forked body takes its capability by THE SAME NAME, so that it hides the outer
+one (two implicits of one type by different names are ambiguous in Scala 2):
+`Async.both(implicit async => ..., implicit async => ...)`.
+
+## SQL and tracing
+
+With `okay-direct-sql` on the class path, `Transaction.run(db) { ... }` handles `Sql`, the capability in scope:
+
+```scala
+def transfer(amount: Int)(using Effect[Sql], Effect[Fail[String]]): Unit =
+  Sql.update("update account set balance = balance - ? where id = ?", amount, "ann")
+  if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Fail.raise("too poor")
+  Sql.update("update account set balance = balance + ? where id = ?", amount, "bob")
+
+Fail.attempt[String, Unit](Transaction.run(db)(transfer(130)))   // Left(too poor), the debit rolled back
+transfer(30)(using Sql.logged(println))                          // each statement told; Sql.readOnly refuses changes
+```
+
+Tracing needs nothing of its own: `given DetachedEffects = Tracing.traced(LoomEffects(), tracer)` makes every
+operation of every body a span, `Async.await`s included.
 
 ## Cats-effect
 

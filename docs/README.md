@@ -26,7 +26,7 @@ The [README](../README.md) is the short tour.
 | `espresso` | `okay-direct-espresso` | on Espresso's continuations; MULTI-SHOT |
 | `sql` | `okay-direct-sql` | SQL as an effect: statements are operations, `Transaction` their handler; read-only and logged capabilities |
 | `otel` | `okay-direct-otel` | every operation a span of OpenTelemetry, with no change to the program |
-| `interop/scala`, `interop/scala2` | `okay-direct-scala`, `okay-direct-scala2` | the front ends |
+| `interop/scala`, `interop/scala2` | `okay-direct-scala`, `okay-direct-scala2` | the front ends: effects, handlers, reflection, `Async`, `Channel`, `Sql` |
 | `interop/scala-cats`, `interop/scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2 |
 | `interop/scala-zio`, `interop/scala2-zio` | `okay-direct-scala-zio`, `okay-direct-scala2-zio` | ZIO and ZStream |
 

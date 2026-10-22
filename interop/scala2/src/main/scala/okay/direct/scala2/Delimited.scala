@@ -36,6 +36,9 @@ object Affine {
   implicit val option: Affine[Option] = Monad.OptionMonad
 }
 
+/** A value with what was written on the way to it: the writer monad's. */
+final case class Written[W, A](value: A, log: List[W])
+
 object Monad {
   implicit object OptionMonad extends Monad[Option] with Affine[Option] { // also Affine's instance
     def pure[A](a: A): Option[A] = Some(a)
@@ -46,6 +49,26 @@ object Monad {
     def pure[A](a: A): List[A] = List(a)
     def flatMap[A, B](m: List[A])(f: A => List[B]): List[B] = m.flatMap(f)
   }
+
+  /** Either with its error type fixed, as a type constructor. */
+  type EitherOf[E] = { type L[A] = Either[E, A] }
+
+  /** Written with its log's type fixed, as a type constructor. */
+  type WrittenOf[W] = { type L[A] = Written[W, A] }
+
+  def either[E]: Monad[EitherOf[E]#L] with Affine[EitherOf[E]#L] = new Monad[EitherOf[E]#L] with Affine[EitherOf[E]#L] {
+    def pure[A](a: A): Either[E, A] = Right(a)
+    def flatMap[A, B](m: Either[E, A])(f: A => Either[E, B]): Either[E, B] = m.flatMap(f)
+  }
+
+  def written[W]: Monad[WrittenOf[W]#L] with Affine[WrittenOf[W]#L] =
+    new Monad[WrittenOf[W]#L] with Affine[WrittenOf[W]#L] {
+      def pure[A](a: A): Written[W, A] = Written(a, Nil)
+      def flatMap[A, B](m: Written[W, A])(f: A => Written[W, B]): Written[W, B] = {
+        val rest = f(m.value)
+        Written(rest.value, m.log ++ rest.log)
+      }
+    }
 }
 
 /** The capability to reflect values of the monad M, in a reify's body. */
@@ -89,4 +112,19 @@ object Delimited {
   /** The body's computation reified, of any monad: on a multi-shot implementation. */
   def reifyMulti[M[_], R](body: Reflect[M] => R)(implicit monad: Monad[M], fx: MultiEffects): M[R] =
     resetMulti[M[R]](prompt => monad.pure(body(reflecting(prompt, monad))))
+
+  /** The either monad's computation in direct style: `r(m)` reflects, a `Left` is the result, the rest not run. */
+  def either[E, R](body: Reflect[Monad.EitherOf[E]#L] => R)(implicit fx: Effects): Either[E, R] = {
+    val monad = Monad.either[E]
+    reify[Monad.EitherOf[E]#L, R](body)(monad, monad, fx)
+  }
+
+  /** The writer monad's computation in direct style: the value, with all that was written, in order. */
+  def written[W, R](body: Reflect[Monad.WrittenOf[W]#L] => R)(implicit fx: Effects): Written[W, R] = {
+    val monad = Monad.written[W]
+    reify[Monad.WrittenOf[W]#L, R](body)(monad, monad, fx)
+  }
+
+  /** `entry` written, under [[written]]. */
+  def tell[W](entry: W)(implicit reflect: Reflect[Monad.WrittenOf[W]#L]): Unit = reflect(Written((), List(entry)))
 }

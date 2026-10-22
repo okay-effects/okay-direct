@@ -16,6 +16,12 @@ package okay.direct
  * type from a pattern only partly, and its match analysis is wrong on that, so the witness stays, as in Java.
  */
 package object scala2 {
+  /** The capability of asynchrony and structured concurrency: okay-direct's `std.Async`, see [[Async$]]. */
+  type Async = okay.direct.std.Async
+
+  /** SQL as an effect (module `okay-direct-sql` on the class path), see [[Sql$]]. */
+  type Sql = okay.direct.sql.Sql
+
   /** The body, run with E's capability, handled by `h`. */
   def handle[E, A, R](h: Handler[E, A, R])(body: Effect[E] => A)(implicit fx: Effects): R =
     fx.handle[E, A, R, RuntimeException](new okay.direct.Handler[E, A, R, RuntimeException] {

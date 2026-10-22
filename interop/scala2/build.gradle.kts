@@ -2,7 +2,14 @@ plugins { scala }
 
 dependencies {
     api(project(":api"))
+    api(project(":std"))
     api("org.scala-lang:scala-library:2.13.18")
+    // Sql's front end: with okay-direct-sql on the class path
+    compileOnly(project(":sql"))
+    testImplementation(project(":sql"))
+    testImplementation("com.h2database:h2:2.3.232")
+    testImplementation(project(":otel"))
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.67.0")
     testImplementation(project(":loom"))
     testImplementation(project(":threads"))
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
