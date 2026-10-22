@@ -1,5 +1,6 @@
 package okay.direct.std;
 
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -17,6 +18,7 @@ import okay.direct.MultiEffects;
  * Optional<Integer> sum = Reflection.reify(fx, Optional::of,
  *     (Delimited.Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));
  * }</pre>
+ * Optional's pair is here already, typed: {@link #optional} and {@link #get}.
  * Java has no higher kinds, so the monad is not a type: its {@code unit} is given to reify, its {@code bind} to each
  * reflect, as a method reference. A generic bind ({@code Optional::flatMap}) does not tell Java the value's type,
  * so a monad's reflect is best written once, as {@code get} above, where it is known; and the prompt's type is
@@ -39,6 +41,23 @@ public final class Reflection {
     /** The monadic value {@code m} reflected: the value it binds, the rest of the body up to the reify bound to it. */
     public static <M, A, MR> A reflect(Delimited.Prompt<MR> prompt, M m, BiFunction<M, Function<A, MR>, MR> bind) {
         return prompt.shift0(k -> bind.apply(m, k::resume));
+    }
+
+    /**
+     * THE OPTIONAL MONAD, reified: the body's value, or empty if a {@link #get} in it found nothing — the rest of the
+     * body then not run. Its types are inferred, the answer's from the target:
+     * <pre>{@code
+     * Optional<String> city = Reflection.optional(fx, p -> get(p,
+     *     Stream.of("user", "address", "city").reduce(doc, (node, key) -> get(p, node.field(key)), (a, b) -> a).str()));
+     * }</pre>
+     */
+    public static <R> Optional<R> optional(Effects effects, Function<Delimited.Prompt<Optional<R>>, R> body) {
+        return reify(effects, Optional::of, body);
+    }
+
+    /** The value of {@code m}, under {@link #optional}: if it is empty, the rest of the body is dropped (it unwinds). */
+    public static <A, R> A get(Delimited.Prompt<Optional<R>> prompt, Optional<A> m) {
+        return reflect(prompt, m, Optional::flatMap);
     }
 
     /**

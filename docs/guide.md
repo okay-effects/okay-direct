@@ -358,8 +358,16 @@ Delimited.reset(espresso, (Prompt<Integer> p) -> 1 + p.<Integer>shift0(k -> k.re
 `std.Reflection` is Filinski's: a monad's computation written in direct style. `reify` runs the body and gives its value
 to the monad's `unit`; `reflect(m)` takes a monadic value apart, the rest of the body up to the reify the function
 given to the monad's `bind` — a reset and a `shift0`. Java has no higher kinds, so the monad is not a type: `unit` goes
-to `reify`, `bind` to each `reflect`, as method references; a monad's reflect is written once, where its value's type
-is known:
+to `reify`, `bind` to each `reflect`, as method references; a monad's pair is written once, where its value's type is
+known. `Optional`'s is in `Reflection`: `optional` reifies, `get` reflects, and their types are inferred:
+
+```java
+Optional<String> city = Reflection.optional(fx, p -> get(p,
+    Stream.of("user", "address", "city").reduce(doc, (node, key) -> get(p, node.field(key)), (a, b) -> a).str()));
+// Optional[Kyiv]; with "phone" for "address": Optional.empty, the rest of the fold not run
+```
+
+Here `doc` is typed data (a `Json` whose `field` and `str` give `Optional`s). Any other monad's pair is written the way `Reflection` writes `Optional`'s:
 
 ```java
 static <A, R> A get(Prompt<Optional<R>> p, Optional<A> m) { return Reflection.reflect(p, m, Optional::flatMap); }
@@ -368,7 +376,7 @@ Optional<Integer> sum = Reflection.reify(fx, Optional::of,
     (Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));       // Optional[3]
 ```
 
-The prompt's type is written in the lambda: Java does not infer the answer type from `unit` alone. A monad whose bind
+With `reify` itself the prompt's type is written in the lambda: Java does not infer the answer type from `unit` alone. A monad whose bind
 calls the rest at most once (`Optional`, an either, a reader) reflects on any implementation; one that calls it more
 often needs a `MultiEffects`. Java's streams are such a monad:
 

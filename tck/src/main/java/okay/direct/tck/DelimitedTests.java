@@ -4,8 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 import okay.direct.Effects;
 import okay.direct.std.Delimited;
 import okay.direct.std.Delimited.Prompt;
@@ -17,9 +21,45 @@ import org.junit.jupiter.api.Test;
 interface DelimitedTests {
     Effects effects();
 
-    /** Optional's reflect, written once: its value's type known here. */
     static <A, R> A get(Prompt<Optional<R>> prompt, Optional<A> m) {
-        return Reflection.reflect(prompt, m, Optional::flatMap);
+        return Reflection.get(prompt, m);
+    }
+
+    /** A little typed JSON, for the path below. */
+    sealed interface Json {
+        default Optional<Json> field(String key) {
+            return this instanceof Obj o ? Optional.ofNullable(o.fields().get(key)) : Optional.empty();
+        }
+
+        default Optional<String> str() {
+            return this instanceof Str s ? Optional.of(s.value()) : Optional.empty();
+        }
+    }
+
+    record Obj(Map<String, Json> fields) implements Json {}
+
+    record Str(String value) implements Json {}
+
+    @Test
+    default void optionalReflectedWithItsTypesInferred() {
+        var fx = effects();
+        Json doc = new Obj(Map.of("user", new Obj(Map.of("address",
+            new Obj(Map.of("city", new Str("Kyiv")))))));
+        var visited = new ArrayList<String>();
+        Optional<String> city = Reflection.optional(fx, p -> Reflection.get(p,
+            Stream.of("user", "address", "city").reduce(doc, (node, key) -> {
+                visited.add(key);
+                return Reflection.get(p, node.field(key));
+            }, (a, b) -> a).str()));
+        assertEquals(Optional.of("Kyiv"), city);
+        visited.clear();
+        Optional<String> number = Reflection.optional(fx, p -> Reflection.get(p,
+            Stream.of("user", "phone", "number").reduce(doc, (node, key) -> {
+                visited.add(key);
+                return Reflection.get(p, node.field(key));
+            }, (a, b) -> a).str()));
+        assertEquals(Optional.empty(), number);
+        assertEquals(List.of("user", "phone"), visited); // the rest of the fold not run
     }
 
     @Test

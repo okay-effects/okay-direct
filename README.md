@@ -163,15 +163,15 @@ an implicit capability is there is checked when the program runs, not when it co
 `std.Delimited`: `reset(fx, p -> ...)` and `p.shift0(k -> ...)`, shift0/reset0 as a handler and its operation; the
 shift0's body runs outside the reset, `k` resumes under it again. On `Effects` `k` is one-shot, on `MultiEffects`
 multi-shot. `std.Reflection`: Filinski's `reify` (a reset, `unit` of the body's value) and `reflect` (a shift0 to
-`bind`); Java has no higher kinds, so `unit` and `bind` are given as method references, a monad's reflect written
-once where its value's type is known:
+`bind`); Java has no higher kinds, so `unit` and `bind` are given as method references. `Optional`'s pair is there,
+typed: `Reflection.optional` reifies, `Reflection.get` reflects, an empty one drops the rest:
 
 ```java
-static <A, R> A get(Prompt<Optional<R>> p, Optional<A> m) { return Reflection.reflect(p, m, Optional::flatMap); }
-
-Optional<Integer> sum = Reflection.reify(fx, Optional::of,
-    (Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));
+Optional<String> city = Reflection.optional(fx, p -> get(p,
+    Stream.of("user", "address", "city").reduce(doc, (node, key) -> get(p, node.field(key)), (a, b) -> a).str()));
 ```
+
+(`doc` typed data: a `Json` whose `field` and `str` give `Optional`s.)
 
 `Async.await(async, future)` awaits a future in direct style with no thread waiting: on a `DetachedEffects` the
 rest is resumed by the future's callback. `Emits.stream(fx, out -> ...)` is a generator, PULLED on a
