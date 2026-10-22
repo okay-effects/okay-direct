@@ -19,10 +19,10 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), and
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation` |
 | `threads` | `okay-direct-threads` | on virtual threads, portable |
 | `espresso` | `okay-direct-espresso` | on Espresso's continuations: MULTI-SHOT, a `MultiEffects` |
-| `scala` | `okay-direct-scala` | the Scala 3 front end, `okay.direct.scala3` |
-| `scala2` | `okay-direct-scala2` | the Scala 2.13 front end, `okay.direct.scala2` |
-| `scala-cats`, `scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2: `await`, `toIO`, `both`/`race`, `use`, `foreach`/`toStream`, cats monads reflected |
-| `scala-zio`, `scala2-zio` | `okay-direct-scala-zio`, `okay-direct-scala2-zio` | ZIO and ZStream: its channels the effects, `fromZIO`/`toZIO`, `both`/`race`, `scoped`/`withLayer`, `foreach`/`toStream` |
+| `interop/scala` | `okay-direct-scala` | the Scala 3 front end, `okay.direct.scala3` |
+| `interop/scala2` | `okay-direct-scala2` | the Scala 2.13 front end, `okay.direct.scala2` |
+| `interop/scala-cats`, `interop/scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2: `await`, `toIO`, `both`/`race`, `use`, `foreach`/`toStream`, cats monads reflected |
+| `interop/scala-zio`, `interop/scala2-zio` | `okay-direct-scala-zio`, `okay-direct-scala2-zio` | ZIO and ZStream: its channels the effects, `fromZIO`/`toZIO`, `both`/`race`, `scoped`/`withLayer`, `foreach`/`toStream` |
 
 ## The API, `okay.direct`
 

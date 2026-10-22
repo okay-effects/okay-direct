@@ -1,8 +1,9 @@
 # Scala: the front ends and the interop
 
-Two front ends over the Java API, each in its language's own way, running on every implementation:
+Two front ends over the Java API, each in its language's own way, running on every implementation; they and their
+interop live in `interop/`:
 
-| | Scala 3, module `scala`, `okay.direct.scala3` | Scala 2.13, module `scala2`, `okay.direct.scala2` |
+| | Scala 3, `interop/scala`, `okay.direct.scala3` | Scala 2.13, `interop/scala2`, `okay.direct.scala2` |
 |---|---|---|
 | an effect | an enum: a GADT | a sealed trait with case classes |
 | a capability | a context parameter, `using Effect[E]` | an implicit, `implicit e: Effect[E]` |

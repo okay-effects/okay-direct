@@ -24,9 +24,9 @@ The [README](../README.md) is the short tour.
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation`; one-shot |
 | `threads` | `okay-direct-threads` | a virtual thread per body; one-shot; portable |
 | `espresso` | `okay-direct-espresso` | on Espresso's continuations; MULTI-SHOT |
-| `scala`, `scala2` | `okay-direct-scala`, `okay-direct-scala2` | the front ends |
-| `scala-cats`, `scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2 |
-| `scala-zio`, `scala2-zio` | `okay-direct-scala-zio`, `okay-direct-scala2-zio` | ZIO and ZStream |
+| `interop/scala`, `interop/scala2` | `okay-direct-scala`, `okay-direct-scala2` | the front ends |
+| `interop/scala-cats`, `interop/scala2-cats` | `okay-direct-scala-cats`, `okay-direct-scala2-cats` | cats-effect and fs2 |
+| `interop/scala-zio`, `interop/scala2-zio` | `okay-direct-scala-zio`, `okay-direct-scala2-zio` | ZIO and ZStream |
 
 Java 25 (a JDK 25 toolchain), Gradle; `./gradlew build` builds and tests everything — the Espresso tests where
 Espresso is installed ([Implementations](implementations.md#espresso)).
