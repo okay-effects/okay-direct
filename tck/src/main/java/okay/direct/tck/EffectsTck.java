@@ -49,6 +49,16 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     }
 
     @Test
+    void theErrorsTypeGivenAsAClassTypesTheBodyWithNoTypedLambda() {
+        var fx = effects();
+        var ok = Reader.run(fx, 42, reader -> State.run(fx, 0, state ->
+            Fail.attempt(fx, String.class, fail -> program(reader, state, fail, true))));
+        assertEquals(new State.Final<>(1, new Fail.Success<String, Integer>(42)), ok);
+        Fail.Outcome<String, Integer> no = Fail.attempt(fx, String.class, fail -> Fail.raise(fail, "no"));
+        assertEquals(new Fail.Failure<String, Integer>("no"), no);
+    }
+
+    @Test
     void anOuterOperationPassesTheInnerHandler() {
         var fx = effects();
         var result = Reader.run(fx, 10, reader -> State.run(fx, 1, state -> Reader.ask(reader) + State.get(state)));

@@ -55,7 +55,7 @@ static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state,
     return base < 0 ? Fail.raise(fail, "negative") : base;
 }
 
-Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.attempt(fx, (Effect<Fail<String>> fail) -> program(reader, state, fail))));
+Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.attempt(fx, String.class, fail -> program(reader, state, fail))));
 ```
 
 A missing handler does not compile: there is no capability to pass. Two handlers of one effect — two counters, both
@@ -173,7 +173,7 @@ propagate out of `handle` as they are.
 |---|---|---|
 | `State<S>` | `get`, `put` | `State.run(fx, initial, body)`: the final state and the value, `State.Final` |
 | `Reader<E>` | `ask` | `Reader.run(fx, env, body)` |
-| `Fail<E>` | `raise` (answered by any type: never resumed) | `Fail.attempt(fx, body)`: `Fail.Success` or `Fail.Failure` |
+| `Fail<E>` | `raise` (answered by any type: never resumed) | `Fail.attempt(fx, String.class, body)`: `Fail.Success` or `Fail.Failure`; the error's class lets Java type the body's lambda |
 | `Choose` | `flip` | `Choose.all(multiFx, body)`: every way, multi-shot |
 | `Trail` | `record(line)` | `Trail.keep(fx, body)`: the lines and the value, `Trail.Kept` |
 | `Emits<A>` | `emit(value)` | `Emits.collect(fx, body)`: a list; `Emits.stream(fx, body)`: a lazy `Stream` |
@@ -251,7 +251,7 @@ Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
     }
 };
 
-Trail.keep(fx, trail -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
+Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
     Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded, pay -> payments(pay)))));
 ```
 

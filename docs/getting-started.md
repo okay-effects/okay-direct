@@ -196,13 +196,13 @@ var table = Map.of("tea", 30, "cake", 50, "jam", 20);
 PriceService service = item -> CompletableFuture.supplyAsync(() -> table.getOrDefault(item, -1),
     CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
 
-Fail.attempt(fx, (Effect<Fail<String>> fail) -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
 // Success[value=100]
 
-Fail.attempt(fx, (Effect<Fail<String>> fail) -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
 // Failure[error=no price for coffee] — and cake is never priced
 
-Trail.keep(fx, trail -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
+Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
     pricesFrom(fx, service, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
 // Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
 ```

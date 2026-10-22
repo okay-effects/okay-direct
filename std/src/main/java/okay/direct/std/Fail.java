@@ -20,6 +20,16 @@ public sealed interface Fail<E> {
     record Success<E, A>(A value) implements Outcome<E, A> {}
     record Failure<E, A>(E error) implements Outcome<E, A> {}
 
+    /**
+     * The same, the error's type given as a class: Java infers the type of the body's capability from it, so the
+     * lambda needs no type — {@code Fail.attempt(fx, String.class, fail -> ...)}. For an error of a generic type, type
+     * the lambda's parameter instead, {@code (Effect<Fail<List<String>>> fail) -> ...}.
+     */
+    static <E, A, T extends Exception> Outcome<E, A> attempt(Effects effects, Class<E> errors, Body<Fail<E>, A, T> body)
+            throws T {
+        return attempt(effects, body);
+    }
+
     static <E, A, T extends Exception> Outcome<E, A> attempt(Effects effects, Body<Fail<E>, A, T> body) throws T {
         return effects.handle(new Handler<Fail<E>, A, Outcome<E, A>, T>() {
             @Override
