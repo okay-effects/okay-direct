@@ -4,6 +4,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import jdk.internal.vm.Continuation;
 import jdk.internal.vm.ContinuationScope;
 import okay.direct.Abandoned;
@@ -164,37 +165,50 @@ public final class LoomEffects implements DetachedEffects {
             }
         }
 
-        /** The body run to its next operation, here: the clause given a detached rest; or its end, the future's. */
+        /**
+         * The body run to its next operation, here: the clause given a detached rest; or its end, the future's. A rest
+         * the clause answers before it returns, on its own thread, goes on in this loop: awaits of what is already
+         * there take no stack.
+         */
         <R> void detached(DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
-            boolean more;
-            try {
-                more = next();
-            } catch (Throwable t) {
-                result.completeExceptionally(t);
-                return;
-            }
-            if (!more) {
+            while (true) {
+                boolean more;
                 try {
-                    result.complete(handler.value(value));
+                    more = next();
                 } catch (Throwable t) {
                     result.completeExceptionally(t);
+                    return;
                 }
-                return;
-            }
-            var k = new Detached<R>(pending, handler, result);
-            try {
-                handler.operation(operation(), k);
-            } catch (Throwable t) {
-                if (k.take()) abandon();
-                result.completeExceptionally(t);
+                if (!more) {
+                    try {
+                        result.complete(handler.value(value));
+                    } catch (Throwable t) {
+                        result.completeExceptionally(t);
+                    }
+                    return;
+                }
+                var k = new Detached<R>(pending, handler, result);
+                try {
+                    handler.operation(operation(), k);
+                } catch (Throwable t) {
+                    // answered or not, the rest unwinds: the run has failed
+                    if (k.left() || k.take()) abandon();
+                    result.completeExceptionally(t);
+                    return;
+                }
+                if (!k.left()) return;
             }
         }
 
         private final class Detached<R> implements Later<F> {
+            private static final int IN_CLAUSE = 0, LEFT = 1, ANSWERED_IN_CLAUSE = 2;
+
             private final Op<F, ?> op;
             private final DetachedHandler<F, A, R> handler;
             private final CompletableFuture<R> result;
             private final AtomicBoolean taken = new AtomicBoolean();
+            private final AtomicInteger state = new AtomicInteger(IN_CLAUSE);
+            private final Thread clause = Thread.currentThread();
 
             Detached(Op<F, ?> op, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
                 this.op = op;
@@ -206,19 +220,30 @@ public final class LoomEffects implements DetachedEffects {
                 return taken.compareAndSet(false, true);
             }
 
+            /** The clause has returned: true if it answered the rest meanwhile, on its thread, to go on with here. */
+            boolean left() {
+                return !state.compareAndSet(IN_CLAUSE, LEFT);
+            }
+
+            /** The rest goes on: in the clause's loop if answered from the clause itself, else here. */
+            private void resume() {
+                if (Thread.currentThread() == clause && state.compareAndSet(IN_CLAUSE, ANSWERED_IN_CLAUSE)) return;
+                detached(handler, result);
+            }
+
             @Override
             public <X> void answer(Op<F, X> op, X value) {
                 if (op != this.op) throw new IllegalArgumentException("resumed with " + op + ", not with " + this.op);
                 if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 answer = value;
-                detached(handler, result);
+                resume();
             }
 
             @Override
             public void raise(Throwable failure) {
                 if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 answer = new Raised(failure);
-                detached(handler, result);
+                resume();
             }
 
             @Override

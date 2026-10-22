@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import okay.direct.Abandoned;
 import okay.direct.Answer;
 import okay.direct.Body;
@@ -169,37 +170,57 @@ public final class ThreadEffects implements DetachedEffects {
             }
         }
 
-        /** The body's next operation waited for, here: the clause given a detached rest; or its end, the future's. */
+        /**
+         * The body's next operation waited for, here: the clause given a detached rest; or its end, the future's. A
+         * rest the clause answers before it returns, on its own thread, goes on in this loop: awaits of what is
+         * already there take no stack.
+         */
         <R> void detached(DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
-            Performed p;
-            try {
-                p = next();
-            } catch (Throwable t) {
-                result.completeExceptionally(t);
-                return;
-            }
-            if (p == null) {
+            while (true) {
+                Performed p;
                 try {
-                    result.complete(handler.value(value));
+                    p = next();
                 } catch (Throwable t) {
                     result.completeExceptionally(t);
+                    return;
                 }
-                return;
-            }
-            var k = new Detached<R>(p, handler, result);
-            try {
-                handler.operation(operation(p), k);
-            } catch (Throwable t) {
-                if (k.take()) abandon(p);
-                result.completeExceptionally(t);
+                if (p == null) {
+                    try {
+                        result.complete(handler.value(value));
+                    } catch (Throwable t) {
+                        result.completeExceptionally(t);
+                    }
+                    return;
+                }
+                var k = new Detached<R>(p, handler, result);
+                try {
+                    handler.operation(operation(p), k);
+                } catch (Throwable t) {
+                    // answered or not, the rest unwinds: the run has failed
+                    if (k.left()) {
+                        try {
+                            var at = next(); // the answered rest has gone on to its next operation: unwound there
+                            if (at != null) abandon(at);
+                        } catch (Throwable ignored) {
+                            // it ended by a failure of its own: the clause's is the run's
+                        }
+                    } else if (k.take()) abandon(p);
+                    result.completeExceptionally(t);
+                    return;
+                }
+                if (!k.left()) return;
             }
         }
 
         private final class Detached<R> implements Later<F> {
+            private static final int IN_CLAUSE = 0, LEFT = 1, ANSWERED_IN_CLAUSE = 2;
+
             private final Performed performed;
             private final DetachedHandler<F, A, R> handler;
             private final CompletableFuture<R> result;
             private final AtomicBoolean taken = new AtomicBoolean();
+            private final AtomicInteger state = new AtomicInteger(IN_CLAUSE);
+            private final Thread clause = Thread.currentThread();
 
             Detached(Performed performed, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
                 this.performed = performed;
@@ -211,19 +232,30 @@ public final class ThreadEffects implements DetachedEffects {
                 return taken.compareAndSet(false, true);
             }
 
+            /** The clause has returned: true if it answered the rest meanwhile, on its thread, to go on with here. */
+            boolean left() {
+                return !state.compareAndSet(IN_CLAUSE, LEFT);
+            }
+
+            /** The rest goes on: in the clause's loop if answered from the clause itself, else here. */
+            private void resume() {
+                if (Thread.currentThread() == clause && state.compareAndSet(IN_CLAUSE, ANSWERED_IN_CLAUSE)) return;
+                detached(handler, result);
+            }
+
             @Override
             public <X> void answer(Op<F, X> op, X value) {
                 if (op != performed.op()) throw new IllegalArgumentException("resumed with " + op + ", not with " + performed.op());
                 if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 put(performed.reply(), new Reply(value, false));
-                detached(handler, result);
+                resume();
             }
 
             @Override
             public void raise(Throwable failure) {
                 if (!take()) throw new IllegalStateException("one-shot: " + performed.op() + " resumed twice");
                 put(performed.reply(), new Reply(new Raised(failure), false));
-                detached(handler, result);
+                resume();
             }
 
             @Override

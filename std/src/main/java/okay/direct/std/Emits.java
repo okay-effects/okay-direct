@@ -117,6 +117,8 @@ public sealed interface Emits<A> {
         private Emit<A> emitted;
         private CompletableFuture<Void> done;
         private boolean ended;
+        /** Not a monitor: the body runs under it, and Loom's continuations must not run under a monitor. */
+        private final java.util.concurrent.locks.ReentrantLock lock = new java.util.concurrent.locks.ReentrantLock();
 
         @SuppressWarnings("unchecked") // an array of one, of a generic type
         private Pull(DetachedEffects effects, Generator<A, ? extends Exception> body) {
@@ -125,7 +127,16 @@ public sealed interface Emits<A> {
             this.waiting = (Later<Emits<A>>[]) new Later<?>[1];
         }
 
-        synchronized boolean next(Consumer<? super A> action) {
+        boolean next(Consumer<? super A> action) {
+            lock.lock();
+            try {
+                return pulled(action);
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        private boolean pulled(Consumer<? super A> action) {
             if (ended) return false;
             if (done == null) {
                 done = effects.start(new DetachedHandler<Emits<A>, Void, Void>() {
@@ -169,9 +180,14 @@ public sealed interface Emits<A> {
             return false;
         }
 
-        synchronized void stop() {
-            ended = true;
-            stopper().run();
+        void stop() {
+            lock.lock();
+            try {
+                ended = true;
+                stopper().run();
+            } finally {
+                lock.unlock();
+            }
         }
 
         /** Drops the rest waiting, if any: it unwinds. Holds no reference to the stream, for the cleaner. */
