@@ -130,16 +130,14 @@ about 0.85 s.
 ```java
 // the effect: one operation, as data — Price(item) is answered by an Integer
 sealed interface Prices {
-    record Price(String item) implements Prices, Op<Prices, Integer> {}
+    record Price(String item) implements Prices, Op<Prices, Optional<Integer>> {}   // an item may have no price
 }
 
 // the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
 static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
     return cart.stream()
-        .mapToInt(item -> {
-            int price = prices.perform(new Prices.Price(item));
-            return price >= 0 ? price : Fail.raise(fail, "no price for " + item);
-        })
+        .mapToInt(item -> prices.perform(new Prices.Price(item))
+            .orElseGet(() -> Fail.raise(fail, "no price for " + item)))
         .sum();
 }
 ```
@@ -148,9 +146,9 @@ static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> 
 of its answer's type; a `TailHandler` answers in place. An interceptor is a handler standing on top of a capability:
 
 ```java
-// an external price service, asynchronous — an HTTP client, a gRPC stub; -1 for an unknown item
+// an external price service, asynchronous — an HTTP client, a gRPC stub; empty for an unknown item
 interface PriceService {
-    CompletableFuture<Integer> quote(String item);
+    CompletableFuture<Optional<Integer>> quote(String item);
 }
 
 // a handler: what Price means — asked of the service, its answer waited for
@@ -170,9 +168,9 @@ static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
     return Interceptor.intercept(prices, (op, pass, k) -> {
         switch (op) {
             case Prices.Price p -> {
-                int full = pass.pass(p);
-                int discounted = full * 9 / 10;
-                Trail.record(trail, p.item() + ": " + full + " -> " + discounted);
+                Optional<Integer> full = pass.pass(p);
+                Optional<Integer> discounted = full.map(price -> price * 9 / 10);
+                full.ifPresent(price -> Trail.record(trail, p.item() + ": " + price + " -> " + discounted.get()));
                 k.answer(p, discounted);
             }
         }
@@ -193,7 +191,7 @@ case Prices.Price p -> k.answer(p, Async.await(async, service.quote(p.item())));
 ```java
 // a fake of the service: each answer 100 ms later, from another thread
 var table = Map.of("tea", 30, "cake", 50, "jam", 20);
-PriceService service = item -> CompletableFuture.supplyAsync(() -> table.getOrDefault(item, -1),
+PriceService service = item -> CompletableFuture.supplyAsync(() -> Optional.ofNullable(table.get(item)),
     CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
 
 Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
@@ -220,7 +218,7 @@ What is unusual here:
 - **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
   a handler of prices there is no capability to call it with: it does not compile.
 
-The imports: `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.direct.{Answer, Body, Effect, Effect.Op,
+The imports: `java.util.Optional`, `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.direct.{Answer, Body, Effect, Effect.Op,
 Effects, Interceptor, TailHandler}`,
 `okay.direct.loom.LoomEffects`, `okay.direct.std.{Fail, Trail}`. A handler that resumes the rest, or does not, or wraps
 what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).

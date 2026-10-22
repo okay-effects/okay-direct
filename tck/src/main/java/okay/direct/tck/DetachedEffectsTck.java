@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -52,15 +53,13 @@ public abstract class DetachedEffectsTck extends EffectsTck {
     }
 
     sealed interface Prices {
-        record Price(String item) implements Prices, Op<Prices, Integer> {}
+        record Price(String item) implements Prices, Op<Prices, Optional<Integer>> {}
     }
 
     static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
         return cart.stream()
-            .mapToInt(item -> {
-                int price = prices.perform(new Prices.Price(item));
-                return price >= 0 ? price : Fail.raise(fail, "no price for " + item);
-            })
+            .mapToInt(item -> prices.perform(new Prices.Price(item))
+                .orElseGet(() -> Fail.raise(fail, "no price for " + item)))
             .sum();
     }
 
@@ -73,7 +72,7 @@ public abstract class DetachedEffectsTck extends EffectsTck {
 
             public void operation(Prices op, Answer<Prices> k) {
                 switch (op) {
-                    case Prices.Price p -> k.answer(p, Async.await(async, later(table.getOrDefault(p.item(), -1))));
+                    case Prices.Price p -> k.answer(p, Async.await(async, later(Optional.ofNullable(table.get(p.item())))));
                 }
             }
         }, body);
