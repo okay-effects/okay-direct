@@ -120,7 +120,9 @@ sbt: `fork := true` and `javaOptions ++= Seq(...)` with the same three. Your cod
 ## A first program: Java
 
 A shop's cart: an effect of our own, prices; a program totalling the cart; two handlers that give prices their
-meaning; and the `Fail` of the standard effects for an item with no price. It is checked against the release 0.1.0.
+meaning — an external, asynchronous price service, and a sale on top of it; and the `Fail` of the standard effects for
+an item with no price. It is checked against the release 0.1.0, run on a virtual thread: eight quotes, 100 ms each, in
+about 0.85 s.
 
 **The effect and the program.** An effect is a sealed interface, its operations records implementing it and
 `Effect.Op<Effect, Answer>`. The program takes the capabilities it needs:
@@ -146,19 +148,24 @@ static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> 
 of its answer's type; a `TailHandler` answers in place. An interceptor is a handler standing on top of a capability:
 
 ```java
-// a handler: what Price means — answered from a price list, -1 for an item not in it
-static <A> A priceList(Effects fx, Map<String, Integer> list, Body<Prices, A, RuntimeException> body) {
+// an external price service, asynchronous — an HTTP client, a gRPC stub; -1 for an unknown item
+interface PriceService {
+    CompletableFuture<Integer> quote(String item);
+}
+
+// a handler: what Price means — asked of the service, its answer waited for
+static <A> A pricesFrom(Effects fx, PriceService service, Body<Prices, A, RuntimeException> body) {
     return fx.handle(new TailHandler<Prices, A, A>() {
         public A value(A result) { return result; }
         public void operation(Prices op, Answer<Prices> k) {
             switch (op) {
-                case Prices.Price p -> k.answer(p, list.getOrDefault(p.item(), -1));
+                case Prices.Price p -> k.answer(p, service.quote(p.item()).join());
             }
         }
     }, body);
 }
 
-// another, on top of it: a sale — each price asked of the one further out, 10% off, told to a trail
+// another, on top of it: a sale — each price asked of the handler further out, 10% off, told to a trail
 static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
     return Interceptor.intercept(prices, (op, pass, k) -> {
         switch (op) {
@@ -176,16 +183,19 @@ static Effect<Prices> sale(Effect<Prices> prices, Effect<Trail> trail) {
 **Running it**, on `fx = new LoomEffects()` (or `new ThreadEffects()`, with no flags):
 
 ```java
-var list = Map.of("tea", 30, "cake", 50, "jam", 20);
+// a fake of the service: each answer 100 ms later, from another thread
+var table = Map.of("tea", 30, "cake", 50, "jam", 20);
+PriceService service = item -> CompletableFuture.supplyAsync(() -> table.getOrDefault(item, -1),
+    CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
 
-Fail.attempt(fx, (Effect<Fail<String>> fail) -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+Fail.attempt(fx, (Effect<Fail<String>> fail) -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
 // Success[value=100]
 
-Fail.attempt(fx, (Effect<Fail<String>> fail) -> priceList(fx, list, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+Fail.attempt(fx, (Effect<Fail<String>> fail) -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
 // Failure[error=no price for coffee] — and cake is never priced
 
 Trail.keep(fx, trail -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
-    priceList(fx, list, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
+    pricesFrom(fx, service, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
 // Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
 ```
 
@@ -195,12 +205,15 @@ What is unusual here:
   with `traverse` and `flatMap`. Here the stack from `perform` up to its handler is suspended, whatever is between.
 - **An early exit from the middle of a stream.** At `coffee`, `Fail`'s handler does not resume the rest: it unwinds,
   the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Failure`.
-- **The meaning changes, the program does not.** `total` is the same; the prices come from a list, from a sale on top of
-  it with a trail, from a database, from a test — whichever handler is installed.
+- **Asynchrony without async code.** The service answers on another thread, later; `total` does not know it: its
+  handler waits for the future, and on a virtual thread a wait holds no OS thread. No `thenCompose`, no callback.
+- **The meaning changes, the program does not.** `total` is the same; the prices come from the service, from a sale on
+  top of it with a trail, from a database, from a test — whichever handler is installed.
 - **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
   a handler of prices there is no capability to call it with: it does not compile.
 
-The imports: `okay.direct.{Answer, Body, Effect, Effect.Op, Effects, Interceptor, TailHandler}`,
+The imports: `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.direct.{Answer, Body, Effect, Effect.Op,
+Effects, Interceptor, TailHandler}`,
 `okay.direct.loom.LoomEffects`, `okay.direct.std.{Fail, Trail}`. A handler that resumes the rest, or does not, or wraps
 what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).
 
