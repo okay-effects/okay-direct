@@ -26,10 +26,12 @@ The release is a Maven repository on GitHub Pages, `https://okay-effects.github.
 | Artifact | When |
 |---|---|
 | `okay-direct-api` | always (the others bring it) |
-| `okay-direct-std` | the standard effects, delimited continuations, monadic reflection (Java) |
+| `okay-direct-std` | the standard effects, `Async` (structured concurrency, time), `Channel`, delimited continuations, monadic reflection (Java) |
 | `okay-direct-loom` / `-threads` / `-espresso` | an implementation, to run on: one |
 | `okay-direct-scala` / `okay-direct-scala2` | the Scala 3 / Scala 2.13 front end |
 | `okay-direct-scala-cats`, `-scala-zio`, `-scala2-cats`, `-scala2-zio` | cats-effect and fs2, ZIO and ZStream |
+| `okay-direct-sql` | SQL as an effect: `Transaction` its handler (any JDBC driver beside it) |
+| `okay-direct-otel` | every operation a span of OpenTelemetry (an SDK of yours beside it) |
 | `okay-direct-tck` | to test an implementation of your own |
 
 **Gradle** (Kotlin DSL):
@@ -283,10 +285,35 @@ On Loom or threads `Choose.all` does not compile: they are not `MultiEffects`. E
 the results out by a generator, `Emits.stream(fx, out -> ...)`, needs no multi-shot continuation and runs on any JDK
 ([Guide](guide.md#generators-streams-on-any-jdk)).
 
+## A first concurrent program
+
+On Loom or threads (a `DetachedEffects`), `Async` awaits futures with no thread waiting, runs bodies at once and cancels
+what is not needed; time is the run's clock, so a test runs on a virtual one:
+
+```java
+static String slowest(Effect<Async> async) {
+    return Async.race(async, List.of(
+        a -> { Async.sleep(a, Duration.ofSeconds(5)); return "slow"; },
+        b -> { Async.sleep(b, Duration.ofSeconds(1)); return "fast"; }));
+}
+
+DetachedEffects fx = new LoomEffects();
+CompletableFuture<String> real = Async.run(fx, Getting::slowest);              // "fast" after a second
+
+var clock = new VirtualClock();
+CompletableFuture<String> test = Async.run(fx, clock, Getting::slowest);
+clock.advance(Duration.ofSeconds(1));                                          // "fast" at once
+```
+
+A forked body is given its own capability (`a`, `b`): Java does not let a lambda's parameter hide `async`. The slow
+body is cancelled when the fast one wins: it unwinds at its sleep, its `finally` blocks run. In Scala 3 the forked
+bodies are context functions and need no names: `Async.race({ Async.sleep(5.seconds); "slow" }, ...)`.
+
 ## Where to go next
 
 - [Guide](guide.md): the four kinds of handler, exceptions, implicit capabilities, interceptors and audited
-  effects, delimited continuations, monadic reflection, the contract.
-- [Scala](scala.md): the front ends, cats-effect and ZIO.
+  effects, generators, asynchrony, structured concurrency, virtual time, channels, delimited continuations, monadic
+  reflection, SQL transactions, tracing, the contract.
+- [Scala](scala.md): the front ends — their `Async`, channels, reflection and SQL — cats-effect and ZIO.
 - [Implementations](implementations.md): how each works, the TCK to test one of your own.
 - [Design](design.md): why it is built as it is.

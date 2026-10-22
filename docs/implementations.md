@@ -110,7 +110,8 @@ against a tenth of one on Loom.
 ## The TCK
 
 Module `tck`, `okay.direct.tck`: what every implementation does, as JUnit tests. An implementation's test extends
-`EffectsTck` (one-shot) or `MultiEffectsTck` (multi-shot) and gives the implementation:
+`EffectsTck` (one-shot), `DetachedEffectsTck` (with detached continuations: `AsyncTests` and `ChannelTests` too) or
+`MultiEffectsTck` (multi-shot) and gives the implementation:
 
 ```java
 class LoomEffectsTest extends EffectsTck {
@@ -123,11 +124,13 @@ class LoomEffectsTest extends EffectsTck {
 
 | | | tests |
 |---|---|---|
-| `EffectsTck` | handlers nested in any order; operations passing inner handlers; operations in lambdas and across functions; clauses outside their bodies; a general handler wrapping the rest; a dropped rest unwinding, `finally` and all; one-shot refused twice; capabilities confined (after the handler, another thread, the own clause); checked exceptions through `handle`; errors; constant stack; a virtual thread; implicit capabilities | 18 |
+| `EffectsTck` | handlers nested in any order; operations passing inner handlers; operations in lambdas and across functions; clauses outside their bodies; a general handler wrapping the rest; a dropped rest unwinding, `finally` and all; one-shot refused twice; capabilities confined (after the handler, another thread, the own clause); checked exceptions through `handle`; errors; constant stack; a virtual thread; implicit capabilities | 19 |
 | `InterceptorTests` | an interceptor changing a plain effect; the audit of payments; a hand-written handler of a sensitive effect unable to answer; an audited capability not outliving its audit; the observer telling and refusing; a dropped rest unwinding through inner handlers; a throwing tail clause | 8 |
-| `DelimitedTests` | `shift0`; a dropped rest; an outer prompt through an inner reset; the reset's own prompt refused in a `shift0`'s body; one-shot refused twice; reflection of `Optional`, with other effects | 7 |
+| `DelimitedTests` | `shift0`; a dropped rest; an outer prompt through an inner reset; the reset's own prompt refused in a `shift0`'s body; one-shot refused twice; reflection of `Optional` (its types inferred, a path through JSON by a fold), of an either, of a writer, with other effects | 10 |
 | `EmitsTests` | a generator collected; a generator as a lazy stream, pulled only as far as needed; a closed stream stopping its body, which unwinds; a failure of the body thrown by the stream | 4 |
 | `DetachedEffectsTck` | `await` with no thread waiting; a failed future thrown at its await; the shop awaiting an asynchronous service; a `Later` resumed once; a dropped `Later` unwinding, the future cancelled | 5 |
+| `AsyncTests` | 200 000 awaits of completed futures in constant stack; `both`, `all`, `race`, `timeout` in virtual time, failures and cancellations; retries backing off in no time; a run ending after its tasks; a task cancelled with its own tasks; a failed run cancelling its tasks; a join's failure; the system's clock; a cancelled join | 14 |
+| `ChannelTests` | a producer and a consumer; a buffered channel taking values until full; 20 000 ping-pongs in constant stack; many producers; select of the ready channel; select's timeout losing no value; a cancelled receiver taking nothing; a cancelled sender taking its value back; a closed channel | 9 |
 | `MultiEffectsTck` | `Choose`; each branch's locals and one heap; a state inside a choice, and outside; a failure per branch; an outer choice forking an inner one; a multi-shot `k`; reflection of lists and streams; Pythagorean triples | 11 |
 
 The nested choice's eight results were checked against an independent freer monad.

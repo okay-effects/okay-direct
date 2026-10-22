@@ -17,6 +17,8 @@ dependencies {
     implementation("io.github.okay-effects:okay-direct-api:0.1.0")
     implementation("io.github.okay-effects:okay-direct-std:0.1.0")
     runtimeOnly("io.github.okay-effects:okay-direct-loom:0.1.0")      // or -threads, or -espresso
+    implementation("io.github.okay-effects:okay-direct-sql:0.1.0")     // if wanted: SQL as an effect
+    implementation("io.github.okay-effects:okay-direct-otel:0.1.0")    // if wanted: tracing
 }
 ```
 

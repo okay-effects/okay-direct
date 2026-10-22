@@ -7,10 +7,10 @@ One API, several implementations; front ends for Scala 3 and Scala 2.13; interop
 | Document | What it covers |
 |---|---|
 | [Getting started](getting-started.md) | the dependency (Gradle, Maven, sbt), which implementation and its JVM flags, a first program in Java and in Scala, your own effect, Espresso |
-| [Guide](guide.md) | the Java API: effects, handlers, capabilities, the standard effects, implicit capabilities, control and audit, delimited continuations, monadic reflection, multi-shot |
-| [Scala](scala.md) | the Scala 3 and Scala 2 front ends; cats-effect and ZIO: awaiting, bodies as `IO`/`ZIO`, ZIO's channels as effects, parallel bodies, resources, streams |
-| [Implementations](implementations.md) | Loom's continuations, threads, Espresso's multi-shot continuations; the contract every one keeps; flags; the TCK |
-| [Design](design.md) | why it is built as it is: GADTs in Java, capabilities against rows, checked exceptions, scoped values, the shared heap of multi-shot; the bugs the tests found |
+| [Guide](guide.md) | the Java API: effects, handlers, capabilities, the standard effects, implicit capabilities, control and audit, generators, asynchrony, structured concurrency, virtual time, channels, delimited continuations, monadic reflection, SQL transactions, tracing with OpenTelemetry |
+| [Scala](scala.md) | the Scala 3 and Scala 2 front ends: effects, reflection, `Async`, channels, SQL; cats-effect and ZIO: awaiting, bodies as `IO`/`ZIO`, ZIO's channels as effects, parallel bodies, resources, streams |
+| [Implementations](implementations.md) | Loom's continuations, threads, Espresso's multi-shot continuations; the contract every one keeps; flags; no resuming under a monitor; the TCK |
+| [Design](design.md) | why it is built as it is: GADTs in Java, capabilities against rows, checked exceptions, detached continuations, structured concurrency and time as the handler's, scoped values, the shared heap of multi-shot; the bugs the tests found |
 
 The [README](../README.md) is the short tour.
 
