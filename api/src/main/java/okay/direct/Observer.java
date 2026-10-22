@@ -27,6 +27,11 @@ public interface Observer {
 
     /** {@code effects}, every operation performed through a capability of its handlers shown to {@code observer}. */
     static Effects watch(Effects effects, Observer observer) {
-        return new Watched(effects, observer);
+        return effects instanceof DetachedEffects detached ? watch(detached, observer) : new Watched(effects, observer);
+    }
+
+    /** The same, its detached bodies' operations shown too: an {@code Async} run's awaits, from wait to answer. */
+    static DetachedEffects watch(DetachedEffects effects, Observer observer) {
+        return new Watched.Detached(effects, observer);
     }
 }
