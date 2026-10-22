@@ -7,7 +7,7 @@ Three implementations of `Effects`, each passing the same TCK:
 | module | `loom` | `threads` | `espresso` |
 | on | `jdk.internal.vm.Continuation` | a virtual thread per body | Espresso's continuations |
 | shots | one | one | MANY: a `MultiEffects` |
-| JVM | HotSpot, JDK 25+ | any JDK 21+ | Espresso (Java on Truffle), JDK 25 |
+| JVM | HotSpot, JDK 25+ | any JDK 25+ | Espresso (Java on Truffle), JDK 25 |
 | flags | see [Loom](#loom) | none | see [Espresso](#espresso) |
 | 100,000 operations of `State` | about 0.06 s | about 1.5 s | (multi-shot: a copy per resumption) |
 
@@ -41,7 +41,7 @@ continuation. This is multi-prompt `shift0`, each scope a prompt.
 ## Threads
 
 Every handled body runs on a virtual thread of its own; `perform` hands the operation to the handler's thread through
-a `SynchronousQueue` and waits for the answer. Portable: no flags, any JDK 21+.
+a `SynchronousQueue` and waits for the answer. Portable: no flags, no internal API (the release is Java 25 bytecode, so JDK 25+).
 
 - **One-shot.** A dropped rest is told so through its reply, and unwinds.
 - **The confinement of capabilities** is checked by a chain of bodies in a `ThreadLocal`: a body's thread, and the

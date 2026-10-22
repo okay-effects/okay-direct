@@ -6,6 +6,7 @@ One API, several implementations; front ends for Scala 3 and Scala 2.13; interop
 
 | Document | What it covers |
 |---|---|
+| [Getting started](getting-started.md) | the dependency (Gradle, Maven, sbt), which implementation and its JVM flags, a first program in Java and in Scala, your own effect, Espresso |
 | [Guide](guide.md) | the Java API: effects, handlers, capabilities, the standard effects, implicit capabilities, control and audit, delimited continuations, monadic reflection, multi-shot |
 | [Scala](scala.md) | the Scala 3 and Scala 2 front ends; cats-effect and ZIO: awaiting, bodies as `IO`/`ZIO`, ZIO's channels as effects, parallel bodies, resources, streams |
 | [Implementations](implementations.md) | Loom's continuations, threads, Espresso's multi-shot continuations; the contract every one keeps; flags; the TCK |

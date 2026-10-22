@@ -12,7 +12,7 @@ import okay.direct.TailHandler;
 
 /**
  * ON THREADS: the body runs on a virtual thread of its own, and {@code perform} hands the operation to the
- * handler's thread and waits for the answer. One-shot. Portable: any JDK 21+, no flags.
+ * handler's thread and waits for the answer. One-shot. Portable: no flags, no internal API.
  */
 public final class ThreadEffects implements Effects {
     @Override

@@ -3,10 +3,10 @@
 Algebraic effects in direct style for Java 25: `perform` is a method call, `handle` runs a body. No monad, no
 `flatMap`, no code transformation. One API, several implementations.
 
-**Using it:** the release 0.1.0 is a Maven repository on GitHub Pages, `https://okay-effects.github.io/okay-direct/maven`,
-group `io.github.okay-effects` ([RELEASING.md](RELEASING.md)).
+**Start here: [getting started](docs/getting-started.md)** — the release 0.1.0 is a Maven repository on GitHub Pages,
+`https://okay-effects.github.io/okay-direct/maven`, group `io.github.okay-effects`.
 
-**Documentation: [docs/](docs/README.md)** — the [guide](docs/guide.md) to the Java API, [Scala](docs/scala.md) and its
+**Documentation: [docs/](docs/README.md)** — [getting started](docs/getting-started.md), the [guide](docs/guide.md) to the Java API, [Scala](docs/scala.md) and its
 cats-effect and ZIO interop, the [implementations](docs/implementations.md), and the [design](docs/design.md).
 
 ## Modules
@@ -235,7 +235,7 @@ only under the same name: Scala 2 does not prefer the more deeply nested implici
 |---|---|---|---|
 | on | `jdk.internal.vm.Continuation`, a scope per handler | a virtual thread per body | Espresso's continuations, a fiber per body under a driver |
 | resume | one-shot | one-shot | MULTI-SHOT: a `MultiEffects` |
-| JVM | HotSpot, JDK 25 | any JDK 21+ | Espresso (Java on Truffle) JDK 25, `--experimental-options --java.Continuum=true` |
+| JVM | HotSpot, JDK 25+ | any JDK 25+, no flags | Espresso (Java on Truffle) JDK 25, `--experimental-options --java.Continuum=true` |
 | flags | `--add-exports` of `jdk.internal.vm`, `jdk.internal.access`; `--add-opens` of `java.lang` | none | `--add-exports` of `jdk.internal.access`; `--add-opens` of `java.lang` |
 | scoped values | switched with the stack | a thread per body | switched with the fibers |
 
