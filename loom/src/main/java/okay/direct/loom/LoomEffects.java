@@ -34,7 +34,7 @@ public final class LoomEffects implements DetachedEffects {
 
     @Override
     public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body) throws E {
-        return new Run<F, A, E>(body).handle(handler);
+        return new Run<F, A, E>(body).inPlace(handler);
     }
 
     @Override
@@ -66,6 +66,22 @@ public final class LoomEffects implements DetachedEffects {
         private Op<F, ?> pending;
         private Object answer;
         private boolean abandoned;
+        /** ANSWERED IN PLACE: a tail handler's clause, called at the perform on the body's own stack — no yield, no
+         * continuation switched; null for a handler that takes the rest */
+        private TailHandler<F, A, ?> tail;
+        /** the bindings outside the body, which the clause runs with */
+        private Object outside;
+        private boolean inClause;
+        private boolean answered;
+        private final Answer<F> inPlaceAnswer = new Answer<>() {
+            @Override
+            public <X> void answer(Op<F, X> op, X value) {
+                if (op != pending) throw new IllegalArgumentException("resumed with " + op + ", not with " + pending);
+                if (answered) throw new IllegalStateException("one-shot: " + op + " resumed twice");
+                answered = true;
+                answer = value;
+            }
+        };
 
         Run(Body<F, A, E> body) {
             continuation = new Continuation(scope, () -> {
@@ -86,6 +102,7 @@ public final class LoomEffects implements DetachedEffects {
         @SuppressWarnings("unchecked") // the answer resume() was given with this very operation as its witness: an X
         public <X> X perform(Op<F, X> op) {
             if (abandoned) throw new Abandoned(this);
+            if (tail != null) return answeredInPlace(op);
             pending = op;
             var inside = Bindings.current();
             Continuation.yield(scope);
@@ -96,6 +113,53 @@ public final class LoomEffects implements DetachedEffects {
                 throw thrown(raised.failure());
             }
             return (X) answer;
+        }
+
+        /**
+         * The operation given to the tail handler's clause here, at the perform: the clause runs with the bindings of
+         * outside the body (switched only if the body has bound others), its answer returned at once. Usable as a yield
+         * is: only where the body's scope is mounted (on its thread, in it, while it runs) and not from the clause
+         * itself. A clause that throws, or does not answer, ends the body as a dropped rest does: Abandoned unwinds it,
+         * and handle throws the failure.
+         */
+        @SuppressWarnings("unchecked") // answered through inPlaceAnswer with this very operation as its witness: an X
+        private <X> X answeredInPlace(Op<F, X> op) {
+            if (inClause || Continuation.getCurrentContinuation(scope) == null)
+                throw new IllegalStateException("a capability used outside its body, or by its own handler's clause");
+            pending = op;
+            answered = false;
+            inClause = true;
+            var inside = Bindings.current();
+            var switched = inside != outside;
+            if (switched) Bindings.restore(outside);
+            try {
+                tail.operation(operation(), inPlaceAnswer);
+            } catch (Throwable t) {
+                failure = t;
+                abandoned = true;
+                throw new Abandoned(this);
+            } finally {
+                inClause = false;
+                if (switched) Bindings.restore(inside);
+            }
+            if (!answered) {
+                failure = new IllegalStateException("a tail handler did not answer " + op);
+                abandoned = true;
+                throw new Abandoned(this);
+            }
+            var x = (X) answer;
+            answer = null;
+            return x;
+        }
+
+        /** The body run once, to its end, its operations answered in place: the continuation only marks its scope. */
+        <R> R inPlace(TailHandler<F, A, R> handler) throws E {
+            tail = handler;
+            outside = Bindings.current();
+            step();
+            if (failure != null) throw rethrown();
+            if (!continuation.isDone()) throw new IllegalStateException("the body of a tail handler yielded its scope");
+            return handler.value(value);
         }
 
         /** Runs the body to its next operation; false when it has returned. */

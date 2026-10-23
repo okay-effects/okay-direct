@@ -14,6 +14,8 @@ import okay.direct.Effects;
 import okay.direct.Handler;
 import okay.direct.Implicit;
 import okay.direct.Resume;
+import okay.direct.TailHandler;
+import okay.direct.Answer;
 import okay.direct.std.Fail;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
@@ -226,6 +228,64 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
             return "done";
         });
         assertEquals(new State.Final<>(100_000, "done"), result);
+    }
+
+    /** a tail handler of Reader whose clause does what {@code clause} says */
+    static <A> TailHandler<Reader<Integer>, A, A> tailReader(java.util.function.BiConsumer<Reader.Ask<Integer>, Answer<Reader<Integer>>> clause) {
+        return new TailHandler<>() {
+            @Override
+            public A value(A value) {
+                return value;
+            }
+
+            @Override
+            public void operation(Reader<Integer> op, Answer<Reader<Integer>> k) {
+                switch (op) {
+                    case Reader.Ask<Integer> ask -> clause.accept(ask, k);
+                }
+            }
+        };
+    }
+
+    @Test
+    void aTailHandlersClauseThatThrowsEndsTheBodyAndHandleThrowsIt() {
+        var fx = effects();
+        var unwound = new AtomicBoolean();
+        var thrown = assertThrows(IllegalArgumentException.class, () -> fx.handle(tailReader((ask, k) -> {
+            throw new IllegalArgumentException("clause");
+        }), (Effect<Reader<Integer>> reader) -> {
+            try {
+                return Reader.ask(reader);
+            } finally {
+                unwound.set(true);
+            }
+        }));
+        assertEquals("clause", thrown.getMessage());
+        assertTrue(unwound.get());
+    }
+
+    @Test
+    void aTailHandlersClauseThatDoesNotAnswerEndsTheBody() {
+        var fx = effects();
+        var unwound = new AtomicBoolean();
+        assertThrows(IllegalStateException.class, () -> fx.handle(tailReader((ask, k) -> {}), (Effect<Reader<Integer>> reader) -> {
+            try {
+                return Reader.ask(reader);
+            } finally {
+                unwound.set(true);
+            }
+        }));
+        assertTrue(unwound.get());
+    }
+
+    @Test
+    void aTailHandlersClauseMayPerformAnOuterEffect() {
+        var fx = effects();
+        var result = State.run(fx, 7, state -> fx.handle(tailReader((ask, k) -> {
+            State.put(state, State.get(state) + 1);   // the clause performs the outer State, every ask
+            k.answer(ask, State.get(state));
+        }), (Effect<Reader<Integer>> reader) -> Reader.ask(reader) + Reader.ask(reader)));
+        assertEquals(new State.Final<>(9, 17), result);
     }
 
     @Test

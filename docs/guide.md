@@ -73,7 +73,8 @@ to the handler, which answers. A handler is an exhaustive `switch` over the effe
 WITNESS of its answer's type, so an answer of the wrong type does not compile (Java has no GADT inference: see
 [Design](design.md#gadts-in-java-the-operation-as-a-witness)).
 
-**`TailHandler<F, A, R>`** answers every operation in place, through `Answer<F>`, and runs in a loop, in constant stack:
+**`TailHandler<F, A, R>`** answers every operation in place, through `Answer<F>`, and runs in a loop, in constant stack
+— on Loom, its clause called right at the `perform`, no continuation switched (a few nanoseconds an operation):
 
 ```java
 fx.handle(new TailHandler<Reader<E>, A, A>() {

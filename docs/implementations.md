@@ -38,6 +38,12 @@ continuation. This is multi-prompt `shift0`, each scope a prompt.
   again (SIGSEGV in `LightweightSynchronizer::exit`; a few lines reproduce it with `Continuation` alone). `std` never
   does it: its channels and clocks complete outside their locks, `Emits` takes a `ReentrantLock`. Code completing a
   future an `Async` body awaits must do the same.
+- **A tail handler answers at the `perform`, no yield.** A `TailHandler`'s (and so a `StatefulHandler`'s) clause is
+  called right at the `perform`, on the body's own stack, with the bindings of outside the body — its continuation is
+  run once, only to mark its scope: `perform` is usable where a yield would be (the scope mounted: in the body, on its
+  thread, while it runs) and not from the clause itself. A clause that throws or does not answer unwinds the body as a
+  dropped rest does. About 27× faster than a yield per operation: a counter's `get` and `put` 4.5 ns each, 10^8 asks of
+  a `Reader` 0.3 s (JDK 26, Apple Silicon).
 - **Awaits of what is already there take no stack**: a rest answered by its clause before the clause returns goes on
   in the run's loop, not in a call from the clause.
 - **Flags**, to compile and to run:
@@ -124,7 +130,7 @@ class LoomEffectsTest extends EffectsTck {
 
 | | | tests |
 |---|---|---|
-| `EffectsTck` | handlers nested in any order; operations passing inner handlers; operations in lambdas and across functions; clauses outside their bodies; a general handler wrapping the rest; a dropped rest unwinding, `finally` and all; one-shot refused twice; capabilities confined (after the handler, another thread, the own clause); checked exceptions through `handle`; errors; constant stack; a virtual thread; implicit capabilities | 19 |
+| `EffectsTck` | handlers nested in any order; operations passing inner handlers; operations in lambdas and across functions; clauses outside their bodies; a general handler wrapping the rest; a dropped rest unwinding, `finally` and all; one-shot refused twice; capabilities confined (after the handler, another thread, the own clause); checked exceptions through `handle`; errors; constant stack; a virtual thread; implicit capabilities; a tail clause that throws, that does not answer, that performs an outer effect | 22 |
 | `InterceptorTests` | an interceptor changing a plain effect; the audit of payments; a hand-written handler of a sensitive effect unable to answer; an audited capability not outliving its audit; the observer telling and refusing; a dropped rest unwinding through inner handlers; a throwing tail clause | 8 |
 | `DelimitedTests` | `shift0`; a dropped rest; an outer prompt through an inner reset; the reset's own prompt refused in a `shift0`'s body; one-shot refused twice; reflection of `Optional` (its types inferred, a path through JSON by a fold), of an either, of a writer, with other effects | 10 |
 | `EmitsTests` | a generator collected; a generator as a lazy stream, pulled only as far as needed; a closed stream stopping its body, which unwinds; a failure of the body thrown by the stream | 4 |
