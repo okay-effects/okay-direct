@@ -36,11 +36,11 @@
         {
           "name": "okay-direct-threads-0.1.0.jar",
           "url": "okay-direct-threads-0.1.0.jar",
-          "size": 14343,
-          "sha512": "884bf31f8d88f2fc8ad4ab3bb102d02d4259e481e37e0ad1c0ea789436c5ea7796baa063bde97d8b9c2a87b9abdb43c96905d0cc0a03e62b364302d378bc0b6c",
-          "sha256": "5a9fd21f73030bd14b17b1006807fca66746f501332cc71a58d8702f7255ca09",
-          "sha1": "d04ac9c170ade7959895b4485d0b8a39cac7ea27",
-          "md5": "95354331dc82d50a394eeafe51198500"
+          "size": 15338,
+          "sha512": "864bec991ee6d4aee13593cf26f5e9d053286c4113c4dba9d33a730596213d097a5cb8bdf4f2627959f388a0ced7ad15cf21fa8b3e8f13bd5eb1c89b5ad68648",
+          "sha256": "917671718271013b91de01dc233c10832d3bc742541ecd47aa540cfffbef2dd2",
+          "sha1": "0dbe3e229e45c5b24728efb7cd8e120132f0a5ab",
+          "md5": "a6a3613a9f329c988a4ddd469a7f0b03"
         }
       ]
     },
@@ -66,11 +66,11 @@
         {
           "name": "okay-direct-threads-0.1.0.jar",
           "url": "okay-direct-threads-0.1.0.jar",
-          "size": 14343,
-          "sha512": "884bf31f8d88f2fc8ad4ab3bb102d02d4259e481e37e0ad1c0ea789436c5ea7796baa063bde97d8b9c2a87b9abdb43c96905d0cc0a03e62b364302d378bc0b6c",
-          "sha256": "5a9fd21f73030bd14b17b1006807fca66746f501332cc71a58d8702f7255ca09",
-          "sha1": "d04ac9c170ade7959895b4485d0b8a39cac7ea27",
-          "md5": "95354331dc82d50a394eeafe51198500"
+          "size": 15338,
+          "sha512": "864bec991ee6d4aee13593cf26f5e9d053286c4113c4dba9d33a730596213d097a5cb8bdf4f2627959f388a0ced7ad15cf21fa8b3e8f13bd5eb1c89b5ad68648",
+          "sha256": "917671718271013b91de01dc233c10832d3bc742541ecd47aa540cfffbef2dd2",
+          "sha1": "0dbe3e229e45c5b24728efb7cd8e120132f0a5ab",
+          "md5": "a6a3613a9f329c988a4ddd469a7f0b03"
         }
       ]
     },
@@ -86,11 +86,11 @@
         {
           "name": "okay-direct-threads-0.1.0-sources.jar",
           "url": "okay-direct-threads-0.1.0-sources.jar",
-          "size": 3701,
-          "sha512": "a110286fe0ba7f29aca00488dc2d2388348228c201e5af90325f3675ca676e1e3174b358980b07a17c68d822bd16530018b38018df36709bc968aabe5d337aec",
-          "sha256": "0f869fd0d410d8a4ad1f9c1ac03c00f20b88f29682e719ef15bd964bfd35aafa",
-          "sha1": "7968a9b5b30ddf9588ebb1806b62d94491ef2b6b",
-          "md5": "6bea69e594f50e7da69dc5b7a397c858"
+          "size": 4208,
+          "sha512": "e9848c912685d86f44178f25c6373711711c20db1509e1979a9a6d379fd5da04647eb62555f3dc5fa8ad67f883eaf562d10bafb77b3179828ed281ec37d38098",
+          "sha256": "442233b8987f09622412aa1cb1a409e4ec41e5de2491073938eeb9bd77090170",
+          "sha1": "92e07c593b28e28543dae373ca48c4dc736bab08",
+          "md5": "f3c2c632e69b050a424a1630a24c21f7"
         }
       ]
     }
