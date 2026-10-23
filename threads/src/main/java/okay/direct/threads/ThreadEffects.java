@@ -3,7 +3,7 @@ package okay.direct.threads;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import okay.direct.Abandoned;
@@ -57,7 +57,7 @@ public final class ThreadEffects implements DetachedEffects {
 
     /** What the body hands its handler: an operation and where to answer it, or that it has ended. */
     private sealed interface Event {}
-    private record Performed(Effect.Op<?, ?> op, SynchronousQueue<Reply> reply) implements Event {}
+    private record Performed(Effect.Op<?, ?> op, Handoff<Reply> reply) implements Event {}
     private record Ended() implements Event {}
     private record Reply(Object answer, boolean abandoned) {}
 
@@ -65,7 +65,9 @@ public final class ThreadEffects implements DetachedEffects {
     private static final ThreadLocal<Run<?, ?, ?>> CURRENT = new ThreadLocal<>();
 
     private static final class Run<F, A, E extends Exception> implements Effect<F> {
-        private final SynchronousQueue<Event> handler = new SynchronousQueue<>();
+        private final Handoff<Event> handler = new Handoff<>();
+        /** the answers to the body's operations: one at a time, so one slot */
+        private final Handoff<Reply> replies = new Handoff<>();
         /** The body this handler runs in, if any. */
         private final Run<?, ?, ?> outer = CURRENT.get();
         private A value;
@@ -92,9 +94,8 @@ public final class ThreadEffects implements DetachedEffects {
         public <X> X perform(Op<F, X> op) {
             if (abandoned) throw new Abandoned(this);
             if (!within()) throw new IllegalStateException("performed outside its body: " + op);
-            var reply = new SynchronousQueue<Reply>();
-            put(handler, new Performed(op, reply));
-            var r = take(reply);
+            put(handler, new Performed(op, replies));
+            var r = take(replies);
             if (r.abandoned()) throw new Abandoned(this);
             if (r.answer() instanceof Raised raised) throw thrown(raised.failure());
             return (X) r.answer();
@@ -292,21 +293,58 @@ public final class ThreadEffects implements DetachedEffects {
         }
     }
 
-    private static <T> void put(SynchronousQueue<T> queue, T t) {
-        try {
-            queue.put(t);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
-        }
+    private static <T> void put(Handoff<T> slot, T t) {
+        slot.put(t);
     }
 
-    private static <T> T take(SynchronousQueue<T> queue) {
-        try {
-            return queue.take();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
+    private static <T> T take(Handoff<T> slot) {
+        return slot.take();
+    }
+
+    /**
+     * A HAND-OFF between two threads, one value at a time: {@code put} leaves it and wakes the taker; {@code take} waits
+     * for it, spinning first (2^12 spin-waits, ~45 µs at most) — the other side is usually a clause or a body step away, and parking a thread
+     * (an OS call for a platform thread) costs microseconds. A value is never put while one is pending: the body hands
+     * over one operation and waits for its answer, its handler answers once. Interrupted while waiting: the
+     * interrupt kept, IllegalStateException (as before, with queues).
+     */
+    private static final class Handoff<T> {
+        private static final int SPINS = 1 << 12;
+        private volatile T value;
+        private volatile Thread waiter;
+
+        void put(T t) {
+            value = t;
+            var w = waiter;
+            if (w != null) LockSupport.unpark(w);
+        }
+
+        T take() {
+            for (int i = 0; i < SPINS; i++) {
+                var t = value;
+                if (t != null) {
+                    value = null;
+                    return t;
+                }
+                Thread.onSpinWait();
+            }
+            waiter = Thread.currentThread();
+            try {
+                while (true) {
+                    var t = value;
+                    if (t != null) {
+                        value = null;
+                        return t;
+                    }
+                    LockSupport.park(this);
+                    if (Thread.interrupted()) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException(new InterruptedException());
+                    }
+                }
+            } finally {
+                waiter = null;
+            }
         }
     }
 }

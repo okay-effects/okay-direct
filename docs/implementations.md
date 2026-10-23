@@ -57,8 +57,15 @@ continuation. This is multi-prompt `shift0`, each scope a prompt.
 ## Threads
 
 Every handled body runs on a virtual thread of its own; `perform` hands the operation to the handler's thread through
-a `SynchronousQueue` and waits for the answer. Portable: no flags, no internal API (the release is Java 25 bytecode, so JDK 25+).
+a one-value slot and waits for the answer. Portable: no flags, no internal API (the release is Java 25 bytecode, so JDK 25+).
 
+- **Hand-off by spinning, then parking.** A side waiting for the other spins first (2^12 spin-waits, ~45 µs at most),
+  then parks: the other side is usually a clause or a body step away, and a parked platform thread is woken by the OS
+  in microseconds. An operation round trip ~150 ns, 50× less than through a `SynchronousQueue` made per operation; the
+  cost, up to ~45 µs of a core spent by a body or handler that waits long (an await of I/O).
+- **No answer at the `perform`.** Loom's tail handlers answer on the body's stack; here the clause stays on the
+  handler's thread: it would otherwise see the scoped values bound inside the body, and without internal API there is
+  no switching them.
 - **One-shot.** A dropped rest is told so through its reply, and unwinds.
 - **Detached.** A `Later` hands its answer to the body's thread and waits, on the resuming thread, for the body's next
   operation or its end.
