@@ -49,6 +49,9 @@ public final class LoomEffects implements DetachedEffects {
         return "LoomEffects";
     }
 
+    /** One operation in this many of a tail handler yields, the others answered in place (see inPlaceSinceYield). */
+    private static final int YIELD_EVERY = 256;
+
     /** An answer that is a failure, to be thrown at the perform. */
     private record Raised(Throwable failure) {}
 
@@ -72,6 +75,11 @@ public final class LoomEffects implements DetachedEffects {
         /** the bindings outside the body, which the clause runs with */
         private Object outside;
         private boolean inClause;
+        /** operations answered in place since the last yield: every YIELD_EVERY-th is yielded instead. A yield
+         * freezes the body's stack into the heap and thaws it lazily, so the stack it runs on stays small — what
+         * keeps a general handler resuming inside this body (an interceptor's: each resumption a call deeper) in
+         * constant stack, as when every operation yielded */
+        private int inPlaceSinceYield;
         private boolean answered;
         private final Answer<F> inPlaceAnswer = new Answer<>() {
             @Override
@@ -102,7 +110,12 @@ public final class LoomEffects implements DetachedEffects {
         @SuppressWarnings("unchecked") // the answer resume() was given with this very operation as its witness: an X
         public <X> X perform(Op<F, X> op) {
             if (abandoned) throw new Abandoned(this);
-            if (tail != null) return answeredInPlace(op);
+            if (tail != null) {
+                if (inClause || Continuation.getCurrentContinuation(scope) == null)
+                    throw new IllegalStateException("a capability used outside its body, or by its own handler's clause");
+                if (++inPlaceSinceYield < YIELD_EVERY) return answeredInPlace(op);
+                inPlaceSinceYield = 0; // this one by a yield, answered by inPlace's loop: the stack frozen, compacted
+            }
             pending = op;
             var inside = Bindings.current();
             Continuation.yield(scope);
@@ -124,8 +137,6 @@ public final class LoomEffects implements DetachedEffects {
          */
         @SuppressWarnings("unchecked") // answered through inPlaceAnswer with this very operation as its witness: an X
         private <X> X answeredInPlace(Op<F, X> op) {
-            if (inClause || Continuation.getCurrentContinuation(scope) == null)
-                throw new IllegalStateException("a capability used outside its body, or by its own handler's clause");
             pending = op;
             answered = false;
             inClause = true;
@@ -152,14 +163,12 @@ public final class LoomEffects implements DetachedEffects {
             return x;
         }
 
-        /** The body run once, to its end, its operations answered in place: the continuation only marks its scope. */
+        /** The body run with its operations answered in place, at the perform, but one in YIELD_EVERY: that one
+         * yields, and is answered by the tail handler's loop as every operation was before. */
         <R> R inPlace(TailHandler<F, A, R> handler) throws E {
             tail = handler;
             outside = Bindings.current();
-            step();
-            if (failure != null) throw rethrown();
-            if (!continuation.isDone()) throw new IllegalStateException("the body of a tail handler yielded its scope");
-            return handler.value(value);
+            return handle(handler); // the loop answers the operations that yield; the rest are answered at the perform
         }
 
         /** Runs the body to its next operation; false when it has returned. */

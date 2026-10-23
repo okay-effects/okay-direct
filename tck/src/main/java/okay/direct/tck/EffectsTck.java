@@ -288,6 +288,37 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
         assertEquals(new State.Final<>(9, 17), result);
     }
 
+    /**
+     * A general handler resuming inside a tail handler's body, 100 000 times, in constant stack: not of every
+     * implementation (Espresso's general handler copies the rest at each resumption), so not a test here — an
+     * implementation that has it calls this from a test of its own.
+     */
+    protected void generalHandlerResumingInsideATailHandlersBodyInConstantStack() {
+        var fx = effects();
+        // an interceptor's shape: each ask passed on to the outer state, the rest resumed — a call deeper each time
+        var result = State.run(fx, 0, state -> fx.handle(new Handler<Reader<Integer>, Integer, Integer, RuntimeException>() {
+            @Override
+            public Integer value(Integer value) {
+                return value;
+            }
+
+            @Override
+            public Integer operation(Reader<Integer> op, Resume<Reader<Integer>, Integer, RuntimeException> k) {
+                return switch (op) {
+                    case Reader.Ask<Integer> ask -> {
+                        State.put(state, State.get(state) + 1);
+                        yield k.resume(ask, 1);
+                    }
+                };
+            }
+        }, reader -> {
+            int sum = 0;
+            for (int i = 0; i < 100_000; i++) sum += Reader.ask(reader);
+            return sum;
+        }));
+        assertEquals(new State.Final<>(100_000, 100_000), result);
+    }
+
     @Test
     void aProgramRunsInAVirtualThread() throws InterruptedException {
         var fx = effects();

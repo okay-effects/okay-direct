@@ -74,7 +74,7 @@ WITNESS of its answer's type, so an answer of the wrong type does not compile (J
 [Design](design.md#gadts-in-java-the-operation-as-a-witness)).
 
 **`TailHandler<F, A, R>`** answers every operation in place, through `Answer<F>`, and runs in a loop, in constant stack
-— on Loom, its clause called right at the `perform`, no continuation switched (a few nanoseconds an operation):
+— on Loom, its clause called right at the `perform`, no continuation switched (a few nanoseconds an operation; one in 256 yields, to keep the stack small):
 
 ```java
 fx.handle(new TailHandler<Reader<E>, A, A>() {

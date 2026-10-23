@@ -42,8 +42,10 @@ continuation. This is multi-prompt `shift0`, each scope a prompt.
   called right at the `perform`, on the body's own stack, with the bindings of outside the body — its continuation is
   run once, only to mark its scope: `perform` is usable where a yield would be (the scope mounted: in the body, on its
   thread, while it runs) and not from the clause itself. A clause that throws or does not answer unwinds the body as a
-  dropped rest does. About 27× faster than a yield per operation: a counter's `get` and `put` 4.5 ns each, 10^8 asks of
-  a `Reader` 0.3 s (JDK 26, Apple Silicon).
+  dropped rest does. One operation in 256 still yields: a yield freezes the body's stack into the heap and thaws it
+  lazily, so the stack stays small — what keeps a general handler resuming inside the body (an interceptor, a call
+  deeper at each resumption) in constant stack. About 20× faster than a yield per operation: a counter's `get` and
+  `put` 6 ns each, 10^8 asks of a `Reader` 0.5 s (JDK 26, Apple Silicon).
 - **Awaits of what is already there take no stack**: a rest answered by its clause before the clause returns goes on
   in the run's loop, not in a call from the clause.
 - **Flags**, to compile and to run:
