@@ -7,7 +7,7 @@ Algebraic effects in direct style for Java 25: `perform` is a method call, `hand
 `https://okay-effects.github.io/okay-direct/maven`, group `io.github.okay-effects`.
 
 **Documentation: [docs/](docs/README.md)** — [getting started](docs/getting-started.md), the [guide](docs/guide.md) to the Java API, [Scala](docs/scala.md) and its
-cats-effect and ZIO interop, the [implementations](docs/implementations.md), and the [design](docs/design.md).
+cats-effect and ZIO interop, the [implementations](docs/implementations.md), the [design](docs/design.md), and the [concept](docs/concept.md).
 
 ## Modules
 

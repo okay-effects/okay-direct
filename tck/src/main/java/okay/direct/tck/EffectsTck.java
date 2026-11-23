@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  * THE TECHNOLOGY COMPATIBILITY KIT: what every implementation of {@link Effects} does. An implementation's test
  * extends it and gives the implementation.
  */
-public abstract class EffectsTck implements InterceptorTests, DelimitedTests, EmitsTests {
+public abstract class EffectsTck implements InterceptorTests, DelimitedTests, EmitsTests, RowsTests {
     @Override
     public abstract Effects effects();
 

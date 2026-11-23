@@ -171,6 +171,31 @@ var result = State.run(fx, 0, state -> {
 `Resume.resume` throws `E` too: resuming runs the rest, which may throw it. Unchecked exceptions and errors of a body
 propagate out of `handle` as they are.
 
+## Rows: a program's effects in its type
+
+A program that needs several effects can take them as ONE parameter whose type is its row — a list of effects, the
+nearest handler first ([concept](concept.md#4-rows-in-java-the-rules)):
+
+```java
+static int step(Fx<? extends Eff<State<Integer>, ? extends Eff<Reader<Integer>, ?>>> fx) {
+    Effect<State<Integer>> state = Fx.head(fx);
+    int by = Reader.ask(Fx.second(fx));
+    int s = State.get(state);
+    State.put(state, s + by);
+    return s;
+}
+
+Fx.run(fx, Reader.run(10, State.run(0, Shop::step)));      // Final[state=10, value=0]
+```
+
+- `Program<R, A>` is a program of the row `R`; `Fx.handle(handler, p)` and the standard forms (`State.run(0, p)`,
+  `Reader.run(env, p)`, `Fail.attempt(p)`, `Choose.collect(multi, p)`) handle its first place; `Fx.run` runs a
+  program of `Pure`. Handlers in another order than the row, or a place left unhandled, do not compile.
+- Open rows (`? extends` at every step) fit into longer rows; `Fx.tail(fx)` gives the rest to a program of it.
+- A program of a row throws no checked exception: `Fail.catching(fail, IOException.class, () -> ...)` turns one into
+  the row's failure, `Fail.rethrow(fx, p)` throws it back at the end.
+- Body-style handlers serve rows through `Fx.with(capability, rest)`.
+
 ## The standard effects
 
 `okay.direct.std`:

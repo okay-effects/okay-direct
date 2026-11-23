@@ -2,10 +2,13 @@ package okay.direct.std;
 
 import okay.direct.Answer;
 import okay.direct.Body;
+import okay.direct.Eff;
 import okay.direct.Effect;
 import okay.direct.Effect.Op;
+import okay.direct.Fx;
 import okay.direct.Effects;
 import okay.direct.StatefulHandler;
+import okay.direct.Program;
 
 /** A state of type S, read and written. */
 public sealed interface State<S> {
@@ -45,5 +48,10 @@ public sealed interface State<S> {
                 };
             }
         }, initial, body);
+    }
+
+    /** In a row: the program's first place answered by a state from {@code initial}; a program of the rest. */
+    static <S, R, A> Program<R, Final<S, A>> run(S initial, Program<Eff<State<S>, R>, A> program) {
+        return outer -> run(outer.effects(), initial, state -> program.run(Fx.with(state, outer)));
     }
 }

@@ -1,11 +1,15 @@
 package okay.direct.std;
 
 import okay.direct.Body;
+import okay.direct.Eff;
 import okay.direct.Effect;
 import okay.direct.Effect.Op;
+import okay.direct.Fx;
 import okay.direct.Effects;
 import okay.direct.Handler;
 import okay.direct.Resume;
+import okay.direct.Program;
+import okay.direct.Pure;
 
 /** Failure with an error of type E: the rest of the body dropped. */
 public sealed interface Fail<E> {
@@ -44,5 +48,42 @@ public sealed interface Fail<E> {
                 };
             }
         }, body);
+    }
+
+    /** In a row: the program's first place a failure, its outcome a value; a program of the rest. */
+    static <E, R, A> Program<R, Outcome<E, A>> attempt(Program<Eff<Fail<E>, R>, A> program) {
+        return outer -> attempt(outer.effects(), (Effect<Fail<E>> fail) -> program.run(Fx.with(fail, outer)));
+    }
+
+    /** The same, the error's type given as a class (for a lambda with no types). */
+    static <E, R, A> Program<R, Outcome<E, A>> attempt(Class<E> errors, Program<Eff<Fail<E>, R>, A> program) {
+        return attempt(program);
+    }
+
+    /** A call that throws E: its value, or its exception raised as a failure of the row. */
+    @FunctionalInterface
+    interface Throwing<A, E extends Exception> {
+        A call() throws E;
+    }
+
+    /** Java's checked exceptions INTO a row: the call's exception of type E becomes a failure; others pass. */
+    static <E extends Exception, A> A catching(Effect<Fail<E>> fail, Class<E> type, Throwing<A, ? extends E> call) {
+        try {
+            return call.call();
+        } catch (RuntimeException e) {
+            if (type.isInstance(e)) return raise(fail, type.cast(e));
+            throw e;
+        } catch (Exception e) {
+            // the call throws only E's (or unchecked ones, caught above)
+            return raise(fail, type.cast(e));
+        }
+    }
+
+    /** A row's failure OUT as Java's checked exception: the program run, a failure thrown. */
+    static <E extends Exception, A> A rethrow(Effects effects, Program<Eff<Fail<E>, Pure>, A> program) throws E {
+        return switch (Fx.run(effects, attempt(program))) {
+            case Success<E, A> success -> success.value();
+            case Failure<E, A> failure -> throw failure.error();
+        };
     }
 }

@@ -1,12 +1,22 @@
 package okay.direct.tck;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import okay.direct.Body;
+import okay.direct.Eff;
+import okay.direct.Effect;
+import okay.direct.Effects;
+import okay.direct.Fx;
+import okay.direct.Handler;
 import okay.direct.MultiEffects;
+import okay.direct.Program;
+import okay.direct.Pure;
+import okay.direct.TailHandler;
 import okay.direct.std.Delimited;
 import okay.direct.std.Delimited.Prompt;
 import okay.direct.std.Reflection;
@@ -135,5 +145,39 @@ public abstract class MultiEffectsTck extends EffectsTck {
         });
         // a <= b <= 10, c <= 15: (5, 12, 13) and (9, 12, 15) have b over 10
         assertEquals(List.of(List.of(3, 4, 5), List.of(6, 8, 10)), triples.toList());
+    }
+
+    @Test
+    void choicesInARowAndTheOrderOfHandlersIsTheMeaning() {
+        Program<Eff<Choose, Eff<State<Integer>, Pure>>, Integer> p = fx -> {
+            Effect<State<Integer>> state = Fx.second(fx);
+            int x = Choose.flip(Fx.head(fx)) ? 1 : 2;
+            State.put(state, State.get(state) + x);
+            return x;
+        };
+        // the state outside the choice: one state through both ways
+        var multi = effects();
+        assertEquals(new State.Final<>(3, List.of(1, 2)), Fx.run(multi, State.run(0, Choose.collect(multi, p))));
+    }
+
+    @Test
+    void choicesOfAnotherImplementationThanTheRowsAreRefused() {
+        MultiEffects multi = effects();
+        // a row of another implementation: one that only passes its handlers on to the multi-shot one
+        Effects other = new Effects() {
+            @Override
+            public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body)
+                    throws E {
+                return multi.handle(handler, body);
+            }
+
+            @Override
+            public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body)
+                    throws E {
+                return multi.handle(handler, body);
+            }
+        };
+        Program<Eff<Choose, Pure>, Boolean> p = fx -> Choose.flip(Fx.head(fx));
+        assertThrows(IllegalStateException.class, () -> Fx.run(other, Choose.collect(multi, p)));
     }
 }

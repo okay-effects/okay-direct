@@ -2,10 +2,13 @@ package okay.direct.std;
 
 import okay.direct.Answer;
 import okay.direct.Body;
+import okay.direct.Eff;
 import okay.direct.Effect;
 import okay.direct.Effect.Op;
+import okay.direct.Fx;
 import okay.direct.Effects;
 import okay.direct.TailHandler;
+import okay.direct.Program;
 
 /** An environment of type E, read. */
 public sealed interface Reader<E> {
@@ -29,5 +32,10 @@ public sealed interface Reader<E> {
                 }
             }
         }, body);
+    }
+
+    /** In a row: the program's first place answered by {@code env}; a program of the rest. */
+    static <E, R, A> Program<R, A> run(E env, Program<Eff<Reader<E>, R>, A> program) {
+        return outer -> run(outer.effects(), env, reader -> program.run(Fx.with(reader, outer)));
     }
 }

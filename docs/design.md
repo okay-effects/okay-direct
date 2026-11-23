@@ -41,7 +41,7 @@ operation being handled. The alternatives were weighed:
 Scala 3 refines GADTs, so its front end's clauses return the answer itself (`case Get() => s`); Scala 2.13 refines
 from typed patterns but its match analysis is wrong on them, so it keeps the witness.
 
-## Capabilities, not rows
+## Capabilities, and rows of them
 
 `perform` goes through a capability, `Effect<F>`, given to the body by its handler — the style of Effekt and of Scala 3's
 capture checking — instead of a row of effects in the program's type found by implicit search:
@@ -54,6 +54,13 @@ capture checking — instead of a row of effects in the program's type found by 
 
 The cost: capabilities are passed. `Implicit` passes them by `ScopedValue` instead, checked at run time; Scala 3's
 context parameters pass them implicitly AND check them statically.
+
+Rows came back as a TYPE over capabilities, not as a lookup: `Fx<Eff<State<Integer>, Eff<Log, Pure>>>` is a list of
+capabilities whose type is the row, its places taken by position (`Fx.head`, `Fx.second`) as the handlers are
+nested. Nothing is found by type, so the erasure problem above does not arise, and a program says what it may do in
+one parameter. The places are written, as Java needs, but only where they are read. Programs of rows throw no checked
+exception: with a type parameter for it, javac infers `Exception` once two handlers are nested; errors are `Fail` in
+the row ([concept](concept.md#4-rows-in-java-the-rules)).
 
 ## Checked exceptions: as markers, not as control
 

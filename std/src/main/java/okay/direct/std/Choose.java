@@ -3,11 +3,14 @@ package okay.direct.std;
 import java.util.ArrayList;
 import java.util.List;
 import okay.direct.Body;
+import okay.direct.Eff;
 import okay.direct.Effect;
 import okay.direct.Effect.Op;
+import okay.direct.Fx;
 import okay.direct.MultiEffects;
 import okay.direct.MultiHandler;
 import okay.direct.MultiResume;
+import okay.direct.Program;
 
 /** A choice of two ways: its handler resumes the rest twice, so it runs only on a {@link MultiEffects}. */
 public sealed interface Choose {
@@ -40,5 +43,17 @@ public sealed interface Choose {
                 };
             }
         }, body);
+    }
+
+    /**
+     * In a row: every way the program's choices (its first place) can go; a program of the rest. Multi-shot is a
+     * type: {@code effects} is the row's implementation, else the program throws {@link IllegalStateException}.
+     */
+    static <R, A> Program<R, List<A>> collect(MultiEffects effects, Program<Eff<Choose, R>, A> program) {
+        return outer -> {
+            if (outer.effects() != effects)
+                throw new IllegalStateException("choices on another implementation than the row's");
+            return all(effects, choose -> program.run(Fx.with(choose, outer)));
+        };
     }
 }

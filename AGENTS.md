@@ -59,6 +59,11 @@ Fail.attempt(fx, String.class, fail -> pricesFrom(fx, table, prices -> total(pri
 // Success[value=80]; with "coffee" in the cart: Failure[error=no price for coffee], the rest of the stream dropped
 ```
 
+Rows (master, 0.1.1-SNAPSHOT): a program needing several effects takes ONE parameter typed by its row,
+`Fx<? extends Eff<State<Integer>, ? extends Eff<Log, ?>>>`, places by position (`Fx.head`, `Fx.second`, `Fx.tail`);
+`Program<R, A>`, `Fx.handle`, `State.run(0, p)`, `Fail.attempt(p)`, `Fx.run(fx, p)` for `Pure`; errors are `Fail` in the
+row (`Fail.catching`/`Fail.rethrow`). The picture behind it: [docs/concept.md](docs/concept.md).
+
 Handler kinds: `TailHandler` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
 wrap the result), `StatefulHandler` (state per resumption), `MultiHandler` (`MultiResume`, only on a `MultiEffects`).
 Standard effects in `okay.direct.std`: `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Async`, `VirtualClock`,
