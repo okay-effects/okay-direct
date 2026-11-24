@@ -134,7 +134,7 @@ interface InterceptorTests {
     default void theObserverSeesEveryOperationAndItsAnswer() {
         var fx = effects();
         var result = Trail.keep(fx, trail -> {
-            var watched = Observer.watch(fx, new Observer() {
+            var watched = Observer.observe(fx, new Observer() {
                 @Override
                 public <X> X observe(Seen<X> seen) {
                     Trail.record(trail, seen.effect() + " " + seen.op());
@@ -159,7 +159,7 @@ interface InterceptorTests {
     default void theObserverRefusesAndItsOwnOperationsAreNotShownToIt() {
         var fx = effects();
         var result = Trail.keep(fx, trail -> {
-            var watched = Observer.watch(fx, new Observer() {
+            var watched = Observer.observe(fx, new Observer() {
                 @Override
                 public <X> X observe(Seen<X> seen) {
                     if (seen.effect().equals("Pay")) {

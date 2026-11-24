@@ -29,23 +29,23 @@ public final class Tracing {
 
     /** {@code effects}, each operation a span of {@code tracer}; operations not written into their spans. */
     public static Effects traced(Effects effects, Tracer tracer) {
-        return Observer.watch(effects, observer(tracer, op -> null));
+        return Observer.observe(effects, observer(tracer, op -> null));
     }
 
     /** The same, each operation written into its span, as {@code okay.op}, as {@code describe} says (null: not). */
     public static Effects traced(Effects effects, Tracer tracer, Function<Op<?, ?, ?>, String> describe) {
-        return Observer.watch(effects, observer(tracer, describe));
+        return Observer.observe(effects, observer(tracer, describe));
     }
 
     /** {@code effects} with detached continuations, traced: an {@code Async} run's awaits spans too, a wait each. */
     public static DetachedEffects traced(DetachedEffects effects, Tracer tracer) {
-        return Observer.watch(effects, observer(tracer, op -> null));
+        return Observer.observe(effects, observer(tracer, op -> null));
     }
 
     /** The same, each operation written into its span as {@code describe} says. */
     public static DetachedEffects traced(DetachedEffects effects, Tracer tracer,
             Function<Op<?, ?, ?>, String> describe) {
-        return Observer.watch(effects, observer(tracer, describe));
+        return Observer.observe(effects, observer(tracer, describe));
     }
 
     /** The observer making the spans: to combine with another. */

@@ -49,7 +49,7 @@ object Control {
 
   /** The body with an implementation whose every capability shows each operation to `observer` first. */
   def observe[A](observer: Observer)(body: Effects => A)(implicit fx: Effects): A =
-    body(Observer.watch(fx, observer))
+    body(Observer.observe(fx, observer))
 }
 
 /** An audit trail: lines recorded in order. */

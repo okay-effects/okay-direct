@@ -112,7 +112,7 @@ Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
 ```
 
 Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on, change, refuse);
-`Observer.watch(fx, observer)` gives an implementation whose every capability shows each operation to the observer
+`Observer.observe(fx, observer)` gives an implementation whose every capability shows each operation to the observer
 (`seen.op()`, `seen.effect()`, `seen.proceed()`) — an audit trail of everything a program did.
 
 ### Design rules
@@ -125,7 +125,7 @@ Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on
   `fx.handle(...)`) around their sub-bodies; they never construct an implementation or start a separate run of
   their own (no `new LoomEffects()`, no `Async.run(...).join()` inside a program).
 - Sensitive operations (payments, deletes, secrets, outbound calls) as `Audited.Op`s under `Audit.audit`; use
-  `Observer.watch` for a complete record of operations.
+  `Observer.observe` for a complete record of operations.
 - Tests swap handlers: an in-memory handler (a `Map`, `State`, `VirtualClock` for time) instead of mocks of a client.
 - No ambient effects in business code: no `Instant.now()`, `Random`, file/network IO, `System.getenv`, threads,
   mutable statics. Declare an effect (or use `Async.sleep`/`VirtualClock` for time).

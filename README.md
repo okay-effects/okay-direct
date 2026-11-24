@@ -241,7 +241,7 @@ An interceptor stands between a capability and its handler: each operation comes
 `Audited.Op`s: its handler is installed by `Audit.handle`, whose body gets a `Vault`, through which nothing can be
 performed; `Audit.audit(vault, interceptor, body)` gives the body the capability, every operation through the
 interceptor. So no sensitive operation is answered that did not pass an audit; a handler of `Audited<Pay>` written
-by hand gets operations of no case and no answer type, and cannot answer them. `Observer.watch(fx, observer)` is an
+by hand gets operations of no case and no answer type, and cannot answer them. `Observer.observe(fx, observer)` is an
 implementation whose every capability shows each operation to the observer, its own operations not shown to it.
 
 ```java

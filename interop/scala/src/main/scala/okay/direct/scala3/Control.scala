@@ -47,7 +47,7 @@ def audit[C, A](i: Interceptor[C, Audited[C]])(body: Effect[Audited[C]] ?=> A)(u
 
 /** The body with an implementation whose every capability shows each operation to `observer` first. */
 def observe[A](observer: Observer)(body: Effects ?=> A)(using fx: Effects): A =
-  body(using Observer.watch(fx, observer))
+  body(using Observer.observe(fx, observer))
 
 /** An audit trail: lines recorded in order. */
 enum Trail:

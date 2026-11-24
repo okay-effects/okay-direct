@@ -290,13 +290,13 @@ Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
 `Audit.handle`: the TCK's `Pay.java`. `payments` is a program over `Effect<Audited<Pay>>` that knows nothing of the
 audit.
 
-**The observer** sees every operation of every effect, with its answer: `Observer.watch(fx, observer)` is an
+**The observer** sees every operation of every effect, with its answer: `Observer.observe(fx, observer)` is an
 implementation whose every capability shows each operation to the observer first. It sees the operation as data
 (`op()`, `effect()` — the sealed interface's name) and its answer at its type (`proceed()`); it may refuse by throwing.
 Its own operations — to a trail — are not shown to it:
 
 ```java
-Effects watched = Observer.watch(fx, new Observer() {
+Effects watched = Observer.observe(fx, new Observer() {
     public <X> X observe(Seen<X> seen) {
         Trail.record(trail, seen.effect() + " " + seen.op());
         var x = seen.proceed();
