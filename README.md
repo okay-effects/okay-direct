@@ -14,7 +14,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 | Module | Artifact | What is in it |
 |---|---|---|
 | `api` | `okay-direct-api` | perform and handle, of no implementation |
-| `std` | `okay-direct-std` | `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit`, `Async` (structured concurrency, time), `VirtualClock`, `Channel`, `Delimited`, `Reflection` on the API |
+| `std` | `okay-direct-std` | `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit`, `Async` (structured concurrency, time), `Clock`, `Channel`, `Delimited`, `Reflection` on the API |
 | `tck` | `okay-direct-tck` | what every implementation does: JUnit tests to extend |
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation` |
 | `threads` | `okay-direct-threads` | on virtual threads, portable |
@@ -201,11 +201,11 @@ implementation; any other, a `List`, by `reifyMulti` on a `MultiEffects`: `reify
 
 `Async` forks bodies and joins them: `both`, `all`, `race`, `timeout`, each cancelling what is not needed any more —
 a cancelled task unwinds at its await, its `finally` blocks run, and a run ends only after its tasks. Time is the
-handler's: `sleep` and timeouts ask the run's clock, and a `VirtualClock` makes a test of hours of retries run in no
+handler's: `sleep` and timeouts ask the run's clock, and a `Clock.Virtual` makes a test of hours of retries run in no
 time, in an order that is always the same. `Channel` is Go's channel between bodies, with `select`; no thread waits:
 
 ```java
-var clock = new VirtualClock();
+var clock = new Clock.Virtual();
 var winner = Async.run(fx, clock, async -> Async.race(async, List.of(
     a -> { Async.sleep(a, Duration.ofSeconds(5)); return "slow"; },
     b -> { Async.sleep(b, Duration.ofSeconds(1)); return "fast"; })));
@@ -324,7 +324,7 @@ Control and audit in Scala 2 (`Control._`): `intercept`, `handleSensitive`, `aud
 answers through `k`: `case t: Transfer => k(t, pass(t))`. An inner capability hides an outer one of the same type
 only under the same name: Scala 2 does not prefer the more deeply nested implicit.
 
-Both front ends have `Async` (structured concurrency, a clock given), `Channel` with `select`, `VirtualClock`, the
+Both front ends have `Async` (structured concurrency, a clock given), `Channel` with `select`, `Clock`, the
 either and writer monads reflected, and `Sql` with `Transaction` — in Scala 3 a forked body is a context function whose
 own capability is the innermost given ([docs/scala.md](docs/scala.md#structured-concurrency-time-channels)).
 

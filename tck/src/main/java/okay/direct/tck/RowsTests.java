@@ -2,8 +2,11 @@ package okay.direct.tck;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -16,6 +19,7 @@ import okay.direct.Fx;
 import okay.direct.Program;
 import okay.effect.Pure;
 import okay.direct.InPlace;
+import okay.direct.std.Clock;
 import okay.direct.std.Throws;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
@@ -120,6 +124,17 @@ interface RowsTests {
         assertEquals(7, recovered);
         int fine = Throws.recover(effects(), String.class, error -> -1, fail -> 2);
         assertEquals(2, fine);
+    }
+
+    @Test
+    default void theClockIsAnEffectItsTimeTheHandlers() {
+        var clock = new Clock.Virtual();
+        clock.advance(Duration.ofSeconds(5));
+        assertEquals(Instant.EPOCH.plusSeconds(5), Clock.at(effects(), clock, Clock::now));
+        Program<Instant, Eff<Clock, Pure>> now = fx -> Clock.now(Fx.head(fx));
+        assertEquals(Instant.EPOCH.plusSeconds(5), Fx.run(effects(), Clock.at(clock, now)));
+        var before = Instant.now();
+        assertFalse(Fx.run(effects(), Clock.system(now)).isBefore(before));
     }
 
     @Test

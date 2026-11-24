@@ -26,6 +26,9 @@ package object scala2 {
   /** The capability of asynchrony and structured concurrency: okay-direct's `std.Async`, see [[Async$]]. */
   type Async = okay.direct.std.Async
 
+  /** The time as an effect: okay-direct's `std.Clock`, see [[Clock$]]. */
+  type Clock = okay.direct.std.Clock
+
   /** SQL as an effect (module `okay-direct-sql` on the class path), see [[Sql$]]. */
   type Sql = okay.direct.sql.Sql
 

@@ -66,7 +66,7 @@ row (`Throws.recover`, `Throws.catching`/`Throws.rethrow`). The picture behind i
 
 Handler kinds: `InPlace` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
 wrap the result), `StatefulHandler` (state per resumption), `MultiHandler` (`MultiResume`, only on a `MultiEffects`).
-Standard effects in `okay.direct.std`: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit`, `Async`, `VirtualClock`,
+Standard effects in `okay.direct.std`: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit`, `Async`, `Clock`,
 `Channel`, `Delimited`, `Reflection`; `okay-direct-sql` has `Transaction`/`Sql`, `okay-direct-otel` `Tracing.traced`.
 
 Scala 3 (`import okay.direct.scala3.*`): an effect is an enum (a GADT), a capability a context parameter:
@@ -126,9 +126,9 @@ Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on
   their own (no `new LoomEffects()`, no `Async.run(...).join()` inside a program).
 - Sensitive operations (payments, deletes, secrets, outbound calls) as `Audited.Op`s under `Audit.audit`; use
   `Observer.observe` for a complete record of operations.
-- Tests swap handlers: an in-memory handler (a `Map`, `State`, `VirtualClock` for time) instead of mocks of a client.
+- Tests swap handlers: an in-memory handler (a `Map`, `State`, `Clock.Virtual` for time) instead of mocks of a client.
 - No ambient effects in business code: no `Instant.now()`, `Random`, file/network IO, `System.getenv`, threads,
-  mutable statics. Declare an effect (or use `Async.sleep`/`VirtualClock` for time).
+  mutable statics. Declare an effect (or use `Clock`, `Async.sleep`, `Clock.Virtual` for time).
 - Continuations: `Resume` is one-shot on every implementation (a second resume throws). Multi-shot (`MultiResume`) is
   real, on `EspressoEffects` only, by copying the suspended frames — never by replaying the program.
 

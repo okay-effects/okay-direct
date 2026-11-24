@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import okay.direct.DetachedEffects;
 import okay.direct.Effect;
 import okay.direct.std.Async;
-import okay.direct.std.VirtualClock;
+import okay.direct.std.Clock;
 import org.junit.jupiter.api.Test;
 
 /** Structured concurrency and time in direct style: forks, joins, races, timeouts, cancellation; virtual time. */
@@ -52,7 +52,7 @@ interface AsyncTests {
 
     @Test
     default void bothRunAtOnceInVirtualTime() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var sum = Async.run(effects(), clock, async -> Async.both(async,
             a -> {
                 Async.sleep(a, s(10));
@@ -72,7 +72,7 @@ interface AsyncTests {
 
     @Test
     default void allFailsAtTheFirstFailureAndCancelsTheRest() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var cleaned = new AtomicBoolean();
         var result = Async.run(effects(), clock, async -> Async.all(async, List.<okay.direct.Body<Async, Integer,
                 RuntimeException>>of(
@@ -95,7 +95,7 @@ interface AsyncTests {
 
     @Test
     default void allGivesTheValuesInOrder() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var result = Async.run(effects(), clock, async -> Async.all(async, List.<okay.direct.Body<Async, String,
                 RuntimeException>>of(
             a -> {
@@ -112,7 +112,7 @@ interface AsyncTests {
 
     @Test
     default void raceTakesTheFirstAndCancelsTheRest() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var slowCleaned = new AtomicBoolean();
         var winner = Async.run(effects(), clock, async -> Async.race(async, List.<okay.direct.Body<Async, String,
                 RuntimeException>>of(
@@ -135,7 +135,7 @@ interface AsyncTests {
 
     @Test
     default void aRaceAllFailedThrowsTheFirstFailure() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var result = Async.run(effects(), clock, async -> Async.race(async, List.<okay.direct.Body<Async, String,
                 RuntimeException>>of(
             a -> {
@@ -154,7 +154,7 @@ interface AsyncTests {
 
     @Test
     default void timeoutGivesNothingAndCancelsTheBody() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var cleaned = new AtomicBoolean();
         var result = Async.run(effects(), clock, async -> List.of(
             Async.timeout(async, s(2), a -> {
@@ -188,7 +188,7 @@ interface AsyncTests {
 
     @Test
     default void retriesBackingOffTakeNoTimeInVirtualTime() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var calls = new ArrayList<Long>();
         var failing = new AtomicInteger(3);
         var result = Async.run(effects(), clock, async -> retry(async, 5, () -> {
@@ -203,7 +203,7 @@ interface AsyncTests {
 
     @Test
     default void aRunEndsAfterItsTasks() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var taskDone = new AtomicBoolean();
         var result = Async.run(effects(), clock, async -> {
             Async.fork(async, a -> {
@@ -221,7 +221,7 @@ interface AsyncTests {
 
     @Test
     default void aTaskCancelledCancelsItsOwnTasks() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var cleaned = new ArrayList<String>();
         var result = Async.run(effects(), clock, async -> {
             var task = Async.fork(async, a -> {
@@ -251,7 +251,7 @@ interface AsyncTests {
 
     @Test
     default void aFailedRunCancelsItsTasks() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var cleaned = new AtomicBoolean();
         var result = Async.run(effects(), clock, async -> {
             Async.fork(async, a -> {
@@ -272,7 +272,7 @@ interface AsyncTests {
 
     @Test
     default void aJoinedTasksFailureIsThrownAtTheJoin() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var result = Async.run(effects(), clock, async -> {
             var task = Async.fork(async, a -> {
                 Async.sleep(a, s(1));
@@ -307,7 +307,7 @@ interface AsyncTests {
 
     @Test
     default void aCancelledRunsFutureIsACancellation() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var result = Async.run(effects(), clock, async -> {
             var task = Async.fork(async, a -> {
                 Async.sleep(a, s(10));
@@ -322,6 +322,6 @@ interface AsyncTests {
         });
         clock.run();
         assertEquals("cancelled", result.join());
-        assertInstanceOf(VirtualClock.class, clock);
+        assertInstanceOf(Clock.Virtual.class, clock);
     }
 }

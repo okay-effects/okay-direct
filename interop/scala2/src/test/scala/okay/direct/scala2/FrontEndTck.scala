@@ -40,6 +40,12 @@ abstract class FrontEndTck {
     })
   }
 
+  @Test def theClockIsAnEffectItsTimeTheHandlers(): Unit = {
+    val clock = new Clock.Virtual()
+    clock.advance(scala.concurrent.duration.FiniteDuration(5, "s"))
+    assertEquals(java.time.Instant.EPOCH.plusSeconds(5), Clock.at(clock) { implicit c => Clock.now })
+  }
+
   @Test def operationsInLambdasAndAcrossFunctions(): Unit = {
     val result = State.run(0) { implicit s =>
       List(1, 2, 3, 4).foreach(add)

@@ -209,6 +209,7 @@ Fx.run(fx, Reader.run(10, State.run(0, Shop::step)));      // Final[state=10, va
 | `Trail` | `record(line)` | `Trail.keep(fx, body)`: the lines and the value, `Trail.Kept` |
 | `Emit<A>` | `send(value)` | `Emit.collect(fx, body)`: a list; `Emit.stream(fx, body)`: a lazy `Stream` |
 | `Async` | `await(future)` | `Async.run(detachedFx, body)`: a `CompletableFuture`, no thread waiting |
+| `Clock` | `now` | `Clock.system(fx, body)`, `Clock.at(fx, time, body)`: a time of the system's, or a `Clock.Virtual` |
 
 plus `Delimited` and `Reflection`, below.
 
@@ -402,9 +403,9 @@ gives nothing.
 ## Time: the system's and virtual
 
 Time is the handler's. `Async.sleep(async, d)`, `Async.now(async)`, `Async.timer(async, d)` and the timeouts ask the
-run's `Async.Clock`: `Clock.SYSTEM` by default, or one given to `Async.run(fx, clock, body)`. A `VirtualClock` moves
-only when told, `advance(d)` or `run()` (until no timer is left): each timer due completes in the order of its time, on
-the thread that moves the clock — so the bodies waiting go on there, in an order that is always the same.
+run's `Clock.Time`: `Clock.Time.SYSTEM` by default, or one given to `Async.run(fx, clock, body)`. A `Clock.Virtual`
+moves only when told, `advance(d)` or `run()` (until no timer is left): each timer due completes in the order of its
+time, on the thread that moves the clock — so the bodies waiting go on there, in an order that is always the same.
 
 ```java
 static <X> X retry(Effect<Async> async, int attempts, Supplier<X> call) {
@@ -418,13 +419,17 @@ static <X> X retry(Effect<Async> async, int attempts, Supplier<X> call) {
     }
 }
 
-var clock = new VirtualClock();
+var clock = new Clock.Virtual();
 var result = Async.run(fx, clock, async -> retry(async, 5, service::call));   // fails 3 times, then "ok"
 clock.run();                                       // 7 seconds of backing off, in no time
 assertEquals("ok", result.join());
 ```
 
 The program is the one that runs in production with the system's clock; the test gives its handler another time.
+
+`Clock` is the time as an effect of its own, for a program that only reads it: `Clock.now(clock)`, its handler
+`Clock.system(fx, body)` or `Clock.at(fx, time, body)` — a `Clock.Virtual` is such a time, so one virtual clock can
+answer a program's `Clock` and time its `Async` run at once.
 
 ## Channels and select
 

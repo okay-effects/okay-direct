@@ -300,7 +300,7 @@ static String slowest(Effect<Async> async) {
 DetachedEffects fx = new LoomEffects();
 CompletableFuture<String> real = Async.run(fx, Getting::slowest);              // "fast" after a second
 
-var clock = new VirtualClock();
+var clock = new Clock.Virtual();
 CompletableFuture<String> test = Async.run(fx, clock, Getting::slowest);
 clock.advance(Duration.ofSeconds(1));                                          // "fast" at once
 ```

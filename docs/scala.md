@@ -146,7 +146,7 @@ a context function, its own capability the innermost given, so its awaits use it
 
 ```scala
 given DetachedEffects = LoomEffects()
-given clock: VirtualClock = VirtualClock()         // the run's time; the system's when none is given
+given clock: Clock.Virtual = Clock.Virtual()     // the run's time; the system's when none is given
 
 val result = Async.run:
   val (a, b) = Async.both({ Async.sleep(10.seconds); "a" }, { Async.sleep(20.seconds); "b" })

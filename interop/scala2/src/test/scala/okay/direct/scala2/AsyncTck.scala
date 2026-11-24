@@ -38,7 +38,7 @@ abstract class AsyncTck {
   }
 
   @Test def bothAtOnceInVirtualTime(): Unit = {
-    implicit val clock: VirtualClock = new VirtualClock()
+    implicit val clock: Clock.Virtual = new Clock.Virtual()
     val pair = Async.run { implicit async =>
       Async.both(implicit async => { Async.sleep(10.seconds); "a" }, implicit async => { Async.sleep(20.seconds); "b" })
     }
@@ -50,7 +50,7 @@ abstract class AsyncTck {
   }
 
   @Test def allRaceAndTimeout(): Unit = {
-    implicit val clock: VirtualClock = new VirtualClock()
+    implicit val clock: Clock.Virtual = new Clock.Virtual()
     var slowCleaned = false
     val result = Async.run { implicit async =>
       val all = Async.all(implicit async => { Async.sleep(3.seconds); 1 }, implicit async => { Async.sleep(1.second); 2 })
@@ -67,7 +67,7 @@ abstract class AsyncTck {
   }
 
   @Test def retriesTakeNoTime(): Unit = {
-    implicit val clock: VirtualClock = new VirtualClock()
+    implicit val clock: Clock.Virtual = new Clock.Virtual()
     var calls = List.empty[Long]
     var failing = 3
     val result = Async.run { implicit async =>
@@ -83,7 +83,7 @@ abstract class AsyncTck {
   }
 
   @Test def aForkedBodyIsCancelled(): Unit = {
-    implicit val clock: VirtualClock = new VirtualClock()
+    implicit val clock: Clock.Virtual = new Clock.Virtual()
     var cleaned = false
     val result = Async.run { implicit async =>
       val task = Async.fork { implicit async =>
@@ -110,7 +110,7 @@ abstract class AsyncTck {
   }
 
   @Test def selectAndItsTimeout(): Unit = {
-    implicit val clock: VirtualClock = new VirtualClock()
+    implicit val clock: Clock.Virtual = new Clock.Virtual()
     val orders = new Channel[String](1)
     val cancels = new Channel[Int]()
     val result = Async.run { implicit async =>
@@ -187,7 +187,7 @@ abstract class AsyncTck {
     val exported = InMemorySpanExporter.create()
     val tracer = SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(exported)).build().get("t")
     val traced: DetachedEffects = okay.direct.otel.Tracing.traced(effects, tracer)
-    Async.run { implicit async => Async.await(CompletableFuture.completedFuture(1)) }(traced, Async.SystemClock).join()
+    Async.run { implicit async => Async.await(CompletableFuture.completedFuture(1)) }(traced, Clock.SystemTime).join()
     assertEquals(List("Async.Await"), exported.getFinishedSpanItems.asScala.map(_.getName).toList)
   }
 }

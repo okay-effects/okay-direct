@@ -6,8 +6,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters._
 import scala.jdk.DurationConverters._
 import scala.jdk.OptionConverters._
-import okay.direct.{Body, DetachedEffects, Effect}
-import okay.direct.std.{Async => J, Channel => JChannel, VirtualClock => JVirtualClock}
+import okay.direct.{Body, DetachedEffects, Effect, Effects}
+import okay.direct.std.{Async => J, Channel => JChannel, Clock => JClock}
 
 /**
  * ASYNCHRONY AND STRUCTURED CONCURRENCY in direct style, the Scala 2 way: `Async.await(future)` gives the future's
@@ -21,20 +21,17 @@ import okay.direct.std.{Async => J, Channel => JChannel, VirtualClock => JVirtua
  *   render(user, orders)
  * }
  * }}}
- * Time is the run's clock, an implicit: the system's by default, a [[VirtualClock]] in a test.
+ * Time is the run's clock, an implicit: the system's by default, a [[Clock.Virtual]] in a test.
  */
 object Async {
-  type Clock = J.Clock
   type Task[X] = J.Task[X]
-
-  /** The system's time. */
-  val SystemClock: Clock = J.Clock.SYSTEM
 
   private def body[X](b: Effect[Async] => X): Body[Async, X, RuntimeException] =
     new Body[Async, X, RuntimeException] { def run(async: Effect[Async]): X = b(async) }
 
   /** The body run, its awaits resumed by their futures' callbacks: its value when it and its tasks end. */
-  def run[A](b: Effect[Async] => A)(implicit fx: DetachedEffects, clock: Clock = SystemClock): CompletableFuture[A] =
+  def run[A](b: Effect[Async] => A)
+      (implicit fx: DetachedEffects, clock: Clock.Time = Clock.SystemTime): CompletableFuture[A] =
     J.run(fx, clock, body(b))
 
   /** The stage's value, once it is there; the body suspended meanwhile, no thread held. */
@@ -70,17 +67,37 @@ object Async {
     J.timeout(async, limit.toJava, body(b)).toScala
 }
 
-/** VIRTUAL TIME: a clock that moves only when told, its timers completing in order on the thread that moves it. */
-final class VirtualClock(start: Instant = Instant.EPOCH) extends J.Clock {
-  private val clock = new JVirtualClock(start)
-  def now(): Instant = clock.now()
-  def after(delay: JDuration): CompletableFuture[Void] = clock.after(delay)
-  /** The time moved on by `by`: each timer due by then completed, in order. */
-  def advance(by: FiniteDuration): Unit = clock.advance(by.toJava)
-  /** The time moved on until no timer is left. */
-  def run(): Unit = clock.run()
-  def waiting: Int = clock.waiting()
-  override def toString: String = clock.toString
+/** The time as an effect (see the type `Clock`): its handler answers from a `Clock.Time`. */
+object Clock {
+  /** A time: what a clock's handler answers, and what an `Async` run's sleeps and timeouts wait by. */
+  type Time = JClock.Time
+
+  /** The system's time. */
+  val SystemTime: Time = JClock.Time.SYSTEM
+
+  def now(implicit clock: Effect[Clock]): Instant = JClock.now(clock)
+
+  /** The body, its time `time`'s: the system's, or a [[Clock.Virtual]] one in a test. */
+  def at[A](time: Time)(b: Effect[Clock] => A)(implicit fx: Effects): A =
+    JClock.at[A, RuntimeException](fx, time, new Body[Clock, A, RuntimeException] {
+      def run(clock: Effect[Clock]): A = b(clock)
+    })
+
+  /** The body, its time the system's. */
+  def system[A](b: Effect[Clock] => A)(implicit fx: Effects): A = at(SystemTime)(b)
+
+  /** VIRTUAL TIME: a time that moves only when told, its timers completing in order on the thread that moves it. */
+  final class Virtual(start: Instant = Instant.EPOCH) extends JClock.Time {
+    private val clock = new JClock.Virtual(start)
+    def now(): Instant = clock.now()
+    def after(delay: JDuration): CompletableFuture[Void] = clock.after(delay)
+    /** The time moved on by `by`: each timer due by then completed, in order. */
+    def advance(by: FiniteDuration): Unit = clock.advance(by.toJava)
+    /** The time moved on until no timer is left. */
+    def run(): Unit = clock.run()
+    def waiting: Int = clock.waiting()
+    override def toString: String = clock.toString
+  }
 }
 
 /**

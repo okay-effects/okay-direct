@@ -24,18 +24,18 @@ final class AsyncRun<A> implements Async.Task<A> {
     private record Waiting(CompletionStage<?> stage, Later<Async> k) {}
 
     private final DetachedEffects effects;
-    private final Async.Clock clock;
+    private final Clock.Time clock;
     private final Set<AsyncRun<?>> tasks = ConcurrentHashMap.newKeySet();
     private final AtomicReference<Waiting> waiting = new AtomicReference<>();
     private final CompletableFuture<A> future = new CompletableFuture<>();
     private volatile boolean cancelled;
 
-    private AsyncRun(DetachedEffects effects, Async.Clock clock) {
+    private AsyncRun(DetachedEffects effects, Clock.Time clock) {
         this.effects = effects;
         this.clock = clock;
     }
 
-    static <A> AsyncRun<A> start(DetachedEffects effects, Async.Clock clock, Body<Async, A, ? extends Exception> body) {
+    static <A> AsyncRun<A> start(DetachedEffects effects, Clock.Time clock, Body<Async, A, ? extends Exception> body) {
         var run = new AsyncRun<A>(effects, clock);
         run.run(body);
         return run;

@@ -6,8 +6,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.jdk.CollectionConverters.*
 import scala.jdk.DurationConverters.*
 import scala.jdk.OptionConverters.*
-import okay.direct.{Body, DetachedEffects, Effect}
-import okay.direct.std.{Async as J, Channel as JChannel, VirtualClock as JVirtualClock}
+import okay.direct.{Body, DetachedEffects, Effect, Effects}
+import okay.direct.std.{Async as J, Channel as JChannel, Clock as JClock}
 
 /**
  * ASYNCHRONY AND STRUCTURED CONCURRENCY in direct style, the Scala 3 way: `Async.await(future)` gives the future's
@@ -19,24 +19,21 @@ import okay.direct.std.{Async as J, Channel as JChannel, VirtualClock as JVirtua
  *   val (user, orders) = Async.both(Async.await(users.find(id)), Async.await(orders.of(id)))
  *   render(user, orders)
  * }}}
- * Time is the run's clock, a given: the system's by default, a [[VirtualClock]] in a test. It is
+ * Time is the run's clock, a given: the system's by default, a [[Clock.Virtual]] in a test. It is
  * okay-direct's `std.Async` (the same tasks, cancellation, clocks), on a `DetachedEffects`: Loom's or threads'.
  */
 type Async = J
 
 object Async:
-  type Clock = J.Clock
   type Task[X] = J.Task[X]
-
-  /** The system's time. */
-  val SystemClock: Clock = J.Clock.SYSTEM
 
   private def body[X](b: Effect[Async] ?=> X): Body[Async, X, RuntimeException] =
     new Body[Async, X, RuntimeException]:
       def run(async: Effect[Async]): X = b(using async)
 
   /** The body run, its awaits resumed by their futures' callbacks: its value when it and its tasks end. */
-  def run[A](body: Effect[Async] ?=> A)(using fx: DetachedEffects, clock: Clock = SystemClock): CompletableFuture[A] =
+  def run[A](body: Effect[Async] ?=> A)
+      (using fx: DetachedEffects, clock: Clock.Time = Clock.SystemTime): CompletableFuture[A] =
     J.run(fx, clock, Async.body(body))
 
   /** The stage's value, once it is there; the body suspended meanwhile, no thread held. */
@@ -71,17 +68,36 @@ object Async:
   def timeout[X](limit: FiniteDuration)(body: Effect[Async] ?=> X)(using async: Effect[Async]): Option[X] =
     J.timeout(async, limit.toJava, Async.body(body)).toScala
 
-/** VIRTUAL TIME: a clock that moves only when told, its timers completing in order on the thread that moves it. */
-final class VirtualClock(start: Instant = Instant.EPOCH) extends J.Clock:
-  private val clock = JVirtualClock(start)
-  def now(): Instant = clock.now()
-  def after(delay: JDuration): CompletableFuture[Void] = clock.after(delay)
-  /** The time moved on by `by`: each timer due by then completed, in order. */
-  def advance(by: FiniteDuration): Unit = clock.advance(by.toJava)
-  /** The time moved on until no timer is left. */
-  def run(): Unit = clock.run()
-  def waiting: Int = clock.waiting()
-  override def toString: String = clock.toString
+/** The time as an effect: okay-direct's `std.Clock`, its handler answering from a `Clock.Time`. */
+type Clock = JClock
+
+object Clock:
+  /** A time: what a clock's handler answers, and what an `Async` run's sleeps and timeouts wait by. */
+  type Time = JClock.Time
+
+  /** The system's time. */
+  val SystemTime: Time = JClock.Time.SYSTEM
+
+  def now(using clock: Effect[Clock]): Instant = JClock.now(clock)
+
+  /** The body, its time `time`'s: the system's, or a [[Clock.Virtual]] one in a test. */
+  def at[A](time: Time)(body: Effect[Clock] ?=> A)(using fx: Effects): A =
+    JClock.at[A, RuntimeException](fx, time, (clock: Effect[Clock]) => body(using clock))
+
+  /** The body, its time the system's. */
+  def system[A](body: Effect[Clock] ?=> A)(using fx: Effects): A = at(SystemTime)(body)
+
+  /** VIRTUAL TIME: a time that moves only when told, its timers completing in order on the thread that moves it. */
+  final class Virtual(start: Instant = Instant.EPOCH) extends JClock.Time:
+    private val clock = JClock.Virtual(start)
+    def now(): Instant = clock.now()
+    def after(delay: JDuration): CompletableFuture[Void] = clock.after(delay)
+    /** The time moved on by `by`: each timer due by then completed, in order. */
+    def advance(by: FiniteDuration): Unit = clock.advance(by.toJava)
+    /** The time moved on until no timer is left. */
+    def run(): Unit = clock.run()
+    def waiting: Int = clock.waiting()
+    override def toString: String = clock.toString
 
 /**
  * A CHANNEL between `Async` bodies, as Go's: `send` waits while it is full (an unbuffered one, `capacity` 0, until a

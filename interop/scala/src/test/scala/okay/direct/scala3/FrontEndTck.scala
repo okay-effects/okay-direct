@@ -26,6 +26,11 @@ abstract class FrontEndTck:
     assertEquals(-1, Throws.recover[String, Int](_ => -1)(Reader.run(42)(State.run(0)(program(false)))._2))
     assertEquals(42, Throws.recover[String, Int](_ => -1)(Reader.run(42)(State.run(0)(program(true)))._2))
 
+  @Test def theClockIsAnEffectItsTimeTheHandlers(): Unit =
+    val clock = Clock.Virtual()
+    clock.advance(scala.concurrent.duration.FiniteDuration(5, "s"))
+    assertEquals(java.time.Instant.EPOCH.plusSeconds(5), Clock.at(clock)(Clock.now))
+
   @Test def operationsInLambdasAndAcrossFunctions(): Unit =
     def add(x: Int)(using Effect[State[Int]]): Unit = State.put(State.get[Int] + x)
     val result = State.run(0):

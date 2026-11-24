@@ -31,7 +31,7 @@ abstract class AsyncTck:
     assertEquals(3, Async.run(Async.await(later(1)) + Async.await(later(2))).get(5, TimeUnit.SECONDS))
 
   @Test def bothAtOnceInVirtualTime(): Unit =
-    given clock: VirtualClock = VirtualClock()
+    given clock: Clock.Virtual = Clock.Virtual()
     val pair = Async.run:
       Async.both({ Async.sleep(10.seconds); "a" }, { Async.sleep(20.seconds); "b" })
     clock.advance(19.seconds)
@@ -41,7 +41,7 @@ abstract class AsyncTck:
     assertEquals(Instant.EPOCH.plusSeconds(20), clock.now())
 
   @Test def allRaceAndTimeout(): Unit =
-    given clock: VirtualClock = VirtualClock()
+    given clock: Clock.Virtual = Clock.Virtual()
     var slowCleaned = false
     val result = Async.run:
       val all = Async.all({ Async.sleep(3.seconds); 1 }, { Async.sleep(1.second); 2 })
@@ -56,7 +56,7 @@ abstract class AsyncTck:
     assertTrue(slowCleaned)
 
   @Test def retriesTakeNoTime(): Unit =
-    given clock: VirtualClock = VirtualClock()
+    given clock: Clock.Virtual = Clock.Virtual()
     var calls = List.empty[Long]
     var failing = 3
     val result = Async.run:
@@ -69,7 +69,7 @@ abstract class AsyncTck:
     assertEquals(List(0L, 1L, 3L, 7L), calls)
 
   @Test def aForkedBodyUsesItsOwnCapabilityAndIsCancelled(): Unit =
-    given clock: VirtualClock = VirtualClock()
+    given clock: Clock.Virtual = Clock.Virtual()
     var cleaned = false
     val result = Async.run:
       val task = Async.fork:
@@ -92,7 +92,7 @@ abstract class AsyncTck:
     assertEquals(5050, sum.get(5, TimeUnit.SECONDS))
 
   @Test def selectAndItsTimeout(): Unit =
-    given clock: VirtualClock = VirtualClock()
+    given clock: Clock.Virtual = Clock.Virtual()
     val orders = Channel[String](1)
     val cancels = Channel[Int]()
     val result = Async.run:

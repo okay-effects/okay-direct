@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import okay.direct.DetachedEffects;
 import okay.direct.std.Async;
 import okay.direct.std.Channel;
-import okay.direct.std.VirtualClock;
+import okay.direct.std.Clock;
 import org.junit.jupiter.api.Test;
 
 /** Channels between bodies, as Go's, and select: no thread waits. */
@@ -116,7 +116,7 @@ interface ChannelTests {
 
     @Test
     default void selectTimesOutAndLosesNoValue() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var channel = new Channel<Integer>();
         var result = Async.run(effects(), clock, async -> {
             var first = Channel.<String>select()
@@ -136,7 +136,7 @@ interface ChannelTests {
 
     @Test
     default void aCancelledReceiverTakesNothing() {
-        var clock = new VirtualClock();
+        var clock = new Clock.Virtual();
         var channel = new Channel<Integer>();
         var result = Async.run(effects(), clock, async -> {
             var receiver = Async.fork(async, a -> channel.receive(a));

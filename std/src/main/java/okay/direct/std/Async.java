@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import okay.direct.Body;
@@ -32,9 +31,9 @@ import okay.effect.Op;
  * cancelled is dropped at the await it waits in, or at its next one: it unwinds, its {@code finally} blocks run, and
  * its own tasks are cancelled with it. A run ends only when the tasks forked in it have ended: none outlives it.
  *
- * <p>TIME is the handler's: {@link #sleep}, {@link #now} and the timeouts ask the run's {@link Clock}. The system's
- * by default; a {@link VirtualClock} in a test, so that hours of retries and timeouts take no time, in an order
- * that is always the same.
+ * <p>TIME is the handler's: {@link #sleep}, {@link #now} and the timeouts ask the run's {@link Clock.Time}. The
+ * system's by default; a {@link Clock.Virtual} in a test, so that hours of retries and timeouts take no time, in an
+ * order that is always the same.
  */
 public sealed interface Async {
     record Await<X>(CompletionStage<X> stage) implements Async, Op<Async, X, Await<X>> {}
@@ -47,33 +46,6 @@ public sealed interface Async {
 
     /** The time, by the run's clock. */
     record Now() implements Async, Op<Async, Instant, Now> {}
-
-    /** The time of a run: what its sleeps and timeouts wait by. */
-    interface Clock {
-        Instant now();
-
-        /** A future completed after {@code delay}. */
-        CompletableFuture<Void> after(Duration delay);
-
-        /** The system's time; a timer completes on the common pool. */
-        Clock SYSTEM = new Clock() {
-            @Override
-            public Instant now() {
-                return Instant.now();
-            }
-
-            @Override
-            public CompletableFuture<Void> after(Duration delay) {
-                return CompletableFuture.runAsync(() -> {},
-                    CompletableFuture.delayedExecutor(Math.max(0, delay.toNanos()), TimeUnit.NANOSECONDS));
-            }
-
-            @Override
-            public String toString() {
-                return "Clock.SYSTEM";
-            }
-        };
-    }
 
     /** A body forked: its value when it ends — after the tasks it forked have ended — and its cancellation. */
     interface Task<X> {
@@ -196,11 +168,11 @@ public sealed interface Async {
 
     /** The body run, its awaits resumed by their stages' callbacks: the body's value, when it and its tasks end. */
     static <A, E extends Exception> CompletableFuture<A> run(DetachedEffects effects, Body<Async, A, E> body) {
-        return run(effects, Clock.SYSTEM, body);
+        return run(effects, Clock.Time.SYSTEM, body);
     }
 
-    /** The same, its time {@code clock}'s. */
-    static <A, E extends Exception> CompletableFuture<A> run(DetachedEffects effects, Clock clock,
+    /** The same, its time {@code clock}'s: the system's, or a {@link Clock.Virtual} one. */
+    static <A, E extends Exception> CompletableFuture<A> run(DetachedEffects effects, Clock.Time clock,
             Body<Async, A, E> body) {
         return AsyncRun.start(effects, clock, body).future();
     }
