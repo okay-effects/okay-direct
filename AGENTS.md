@@ -8,14 +8,19 @@ method call, `handle` runs a body; no monad, no `flatMap`. One API (`okay.direct
 Dependency (the release is a Maven repository on GitHub Pages, group `io.github.okay-effects`, version `0.1.0`):
 
 ```kotlin
-repositories { mavenCentral(); maven("https://okay-effects.github.io/okay-direct/maven") }
+repositories {
+    mavenCentral()
+    maven("https://okay-effects.github.io/okay-direct/maven")
+    maven("https://okay-effects.github.io/okay-java/maven")   // okay-java-api, the vocabulary
+}
 dependencies {
     implementation("io.github.okay-effects:okay-direct-std:0.1.0")    // the standard effects; brings okay-direct-api
     implementation("io.github.okay-effects:okay-direct-loom:0.1.0")   // ONE implementation: loom, threads, espresso
 }
 ```
 
-sbt: `resolvers += "okay-direct" at "https://okay-effects.github.io/okay-direct/maven"` and `%` (not `%%`):
+sbt: `resolvers ++= Seq("okay-direct" at "https://okay-effects.github.io/okay-direct/maven", "okay-java" at
+"https://okay-effects.github.io/okay-java/maven")` and `%` (not `%%`):
 `"io.github.okay-effects" % "okay-direct-scala" % "0.1.0"` (Scala 3; `okay-direct-scala2` for 2.13). JDK 25+.
 
 ### The model

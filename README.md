@@ -4,7 +4,8 @@ Algebraic effects in direct style for Java 25: `perform` is a method call, `hand
 `flatMap`, no code transformation. One API, several implementations.
 
 **Start here: [getting started](docs/getting-started.md)** — the release 0.1.0 is a Maven repository on GitHub Pages,
-`https://okay-effects.github.io/okay-direct/maven`, group `io.github.okay-effects`.
+`https://okay-effects.github.io/okay-direct/maven` (with okay-java's, `https://okay-effects.github.io/okay-java/maven`, for the vocabulary okay-java-api), group
+`io.github.okay-effects`.
 
 **Documentation: [docs/](docs/README.md)** — [getting started](docs/getting-started.md), the [guide](docs/guide.md) to the Java API, [Scala](docs/scala.md) and its
 cats-effect and ZIO interop, the [implementations](docs/implementations.md), the [design](docs/design.md), and the [concept](docs/concept.md).

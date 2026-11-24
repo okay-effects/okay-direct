@@ -20,7 +20,8 @@ which implementation to run on.
 
 ## The dependency
 
-The release is a Maven repository on GitHub Pages, `https://okay-effects.github.io/okay-direct/maven`; the group is
+The release is a Maven repository on GitHub Pages, `https://okay-effects.github.io/okay-direct/maven`, beside
+okay-java's, `https://okay-effects.github.io/okay-java/maven`, which has the vocabulary okay-direct is written over (`okay-java-api`); the group is
 `io.github.okay-effects`, each module an artifact `okay-direct-<module>`, version `0.1.0`.
 
 | Artifact | When |
@@ -40,6 +41,7 @@ The release is a Maven repository on GitHub Pages, `https://okay-effects.github.
 repositories {
     mavenCentral()
     maven("https://okay-effects.github.io/okay-direct/maven")
+    maven("https://okay-effects.github.io/okay-java/maven")   // okay-java-api, the vocabulary
 }
 
 dependencies {
@@ -57,6 +59,10 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
   <repository>
     <id>okay-direct</id>
     <url>https://okay-effects.github.io/okay-direct/maven</url>
+  </repository>
+  <repository>
+    <id>okay-java</id>
+    <url>https://okay-effects.github.io/okay-java/maven</url>
   </repository>
 </repositories>
 
@@ -78,6 +84,7 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
 
 ```scala-sbt
 resolvers += "okay-direct" at "https://okay-effects.github.io/okay-direct/maven"
+resolvers += "okay-java" at "https://okay-effects.github.io/okay-java/maven"   // okay-java-api, the vocabulary
 
 libraryDependencies ++= Seq(
   "io.github.okay-effects" % "okay-direct-scala" % "0.1.0",     // Scala 3; okay-direct-scala2 on 2.13
@@ -249,6 +256,7 @@ With scala-cli, the whole of it in one file:
 ```scala
 //> using scala 3.9.0
 //> using repository https://okay-effects.github.io/okay-direct/maven
+//> using repository https://okay-effects.github.io/okay-java/maven
 //> using dep io.github.okay-effects:okay-direct-scala:0.1.0
 //> using dep io.github.okay-effects:okay-direct-loom:0.1.0
 //> using javaOpt --add-exports=java.base/jdk.internal.vm=ALL-UNNAMED

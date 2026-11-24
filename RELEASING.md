@@ -11,6 +11,7 @@ Gradle:
 repositories {
     mavenCentral()
     maven("https://okay-effects.github.io/okay-direct/maven")
+    maven("https://okay-effects.github.io/okay-java/maven")   // okay-java-api, the vocabulary
 }
 
 dependencies {
@@ -26,6 +27,7 @@ sbt:
 
 ```scala-sbt
 resolvers += "okay-direct" at "https://okay-effects.github.io/okay-direct/maven"
+resolvers += "okay-java" at "https://okay-effects.github.io/okay-java/maven"   // okay-java-api, the vocabulary
 
 libraryDependencies ++= Seq(
   "io.github.okay-effects" % "okay-direct-scala" % "0.1.0",          // Scala 3; okay-direct-scala2 for 2.13
