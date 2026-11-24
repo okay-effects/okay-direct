@@ -23,7 +23,8 @@ sbt: `resolvers += "okay-direct" at "https://okay-effects.github.io/okay-direct/
 An effect is a sealed interface, its operations records implementing `Op<F, Answer, Self>` (okay-java-api's `okay.effect.Op`, Self the record itself). A program takes the
 capabilities (`Effect<F>`) it needs as parameters; its signature lists what it may do. A handler is an exhaustive
 `switch` answering through `k`, the operation the witness of the answer's type. (Names of master, 0.1.1-SNAPSHOT;
-0.1.0 has the older `TailHandler`, `value`/`operation`, `Fail`, `Emits`, `VirtualClock`, `Audited.Op`, `Observer.watch`.)
+0.1.0 has the older `TailHandler`, `value`/`operation`, `Fail`, `Emits`, `VirtualClock`, `Audited.Op`,
+`Observer.watch`.)
 
 ```java
 import okay.direct.*;
