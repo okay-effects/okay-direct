@@ -2,13 +2,13 @@ package okay.direct.scala2.ziointerop
 
 import zio.{Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.{Effect, Effects}
-import okay.direct.scala2.{Answer, Emits, Fail, Reader, TailHandler, handle}
+import okay.direct.scala2.{Op, Answer, Emits, Fail, Reader, TailHandler, handle}
 
 /** ZIOs awaited in a direct-style body. */
 sealed trait Zios
 
 object Zios {
-  final case class Run[A](zio: ZIO[Any, Nothing, A]) extends Zios with Effect.Op[Zios, A]
+  final case class Run[A](zio: ZIO[Any, Nothing, A]) extends Zios with Op[Zios, A]
 }
 
 /**

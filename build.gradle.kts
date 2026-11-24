@@ -7,7 +7,11 @@ subprojects {
     group = "io.github.okay-effects"
     version = "0.1.1-SNAPSHOT"
 
-    repositories { mavenCentral() }
+    repositories {
+        mavenCentral()
+        // okay-java-api, the vocabulary: in okay-java's Maven repository on GitHub Pages
+        maven("https://okay-effects.github.io/okay-java/maven")
+    }
 
     configure<JavaPluginExtension> {
         toolchain { languageVersion = JavaLanguageVersion.of(25) }

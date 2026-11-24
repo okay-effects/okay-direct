@@ -1,15 +1,14 @@
 package okay.direct.scala2
 
-import okay.direct.Effect
 
 /** The rest of the body: `k(op, answer)`, the operation fixing the answer's type. */
 trait Resume[E, R] {
-  def apply[X](op: Effect.Op[E, X], answer: X): R
+  def apply[X](op: Op[E, X], answer: X): R
 }
 
 /** The answer to an operation, given in place. */
 trait Answer[E] {
-  def apply[X](op: Effect.Op[E, X], answer: X): Unit
+  def apply[X](op: Op[E, X], answer: X): Unit
 }
 
 /** A handler of E: the body's value to the result, and an operation with `k`, the rest of the body: ONE-SHOT. */

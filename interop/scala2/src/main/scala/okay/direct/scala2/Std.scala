@@ -6,8 +6,8 @@ import okay.direct.{Effect, Effects, MultiEffects}
 sealed trait State[S]
 
 object State {
-  final case class Get[S]() extends State[S] with Effect.Op[State[S], S]
-  final case class Put[S](value: S) extends State[S] with Effect.Op[State[S], Unit]
+  final case class Get[S]() extends State[S] with Op[State[S], S]
+  final case class Put[S](value: S) extends State[S] with Op[State[S], Unit]
 
   def get[S](implicit state: Effect[State[S]]): S = state.perform(Get[S]())
   def put[S](value: S)(implicit state: Effect[State[S]]): Unit = state.perform(Put(value))
@@ -27,7 +27,7 @@ object State {
 sealed trait Reader[E]
 
 object Reader {
-  final case class Ask[E]() extends Reader[E] with Effect.Op[Reader[E], E]
+  final case class Ask[E]() extends Reader[E] with Op[Reader[E], E]
 
   def ask[E](implicit reader: Effect[Reader[E]]): E = reader.perform(Ask[E]())
 
@@ -44,7 +44,7 @@ object Reader {
 sealed trait Fail[E]
 
 object Fail {
-  final case class Raise[E](error: E) extends Fail[E] with Effect.Op[Fail[E], Nothing]
+  final case class Raise[E](error: E) extends Fail[E] with Op[Fail[E], Nothing]
 
   def raise[E](error: E)(implicit fail: Effect[Fail[E]]): Nothing = fail.perform(Raise(error))
 
@@ -61,7 +61,7 @@ object Fail {
 sealed trait Choose
 
 object Choose {
-  case object Flip extends Choose with Effect.Op[Choose, Boolean]
+  case object Flip extends Choose with Op[Choose, Boolean]
 
   def flip(implicit choose: Effect[Choose]): Boolean = choose.perform(Flip)
 
@@ -79,7 +79,7 @@ object Choose {
 sealed trait Emits[A]
 
 object Emits {
-  final case class Emit[A](value: A) extends Emits[A] with Effect.Op[Emits[A], Unit]
+  final case class Emit[A](value: A) extends Emits[A] with Op[Emits[A], Unit]
 
   def emit[A](value: A)(implicit emits: Effect[Emits[A]]): Unit = emits.perform(Emit(value))
 

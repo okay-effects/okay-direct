@@ -1,5 +1,6 @@
 package okay.direct.espresso;
 
+import okay.effect.Op;
 import okay.direct.Effect;
 
 /**
@@ -21,7 +22,7 @@ final class Driver {
 
     /** What a fiber asks. */
     sealed interface Request {}
-    record Perform(Object key, Effect.Op<?, ?> op) implements Request {}
+    record Perform(Object key, Op<?, ?, ?> op) implements Request {}
     record Start(Handling<?, ?, ?, ?> handling) implements Request {}
     record Continue(Handling<?, ?, ?, ?> handling, Fiber performer, Object answer) implements Request {}
 
@@ -31,7 +32,7 @@ final class Driver {
     record Failed(Throwable failure) implements Event {}
     /** The body's rest dropped by its handler has unwound. */
     record Ended() implements Event {}
-    record Performed(Effect.Op<?, ?> op, Fiber performer) implements Event {}
+    record Performed(Op<?, ?, ?> op, Fiber performer) implements Event {}
 
     /** Replies to a perform that are not an answer. */
     record Abandon(Object key) {}

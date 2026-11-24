@@ -5,13 +5,13 @@ import java.util.List;
 import okay.direct.Answer;
 import okay.direct.Body;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.StatefulHandler;
 
 /** An audit trail: lines recorded in order. Handled outside the interceptors that record to it. */
 public sealed interface Trail {
-    record Record(String line) implements Trail, Op<Trail, Void> {}
+    record Record(String line) implements Trail, Op<Trail, Void, Record> {}
 
     static void record(Effect<Trail> trail, String line) {
         trail.perform(new Record(line));

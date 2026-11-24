@@ -1,5 +1,6 @@
 package okay.direct.otel;
 
+import okay.effect.Op;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -80,7 +81,7 @@ abstract class TracingTests {
     }
 
     sealed interface Ask {
-        record Question() implements Ask, Effect.Op<Ask, Integer> {}
+        record Question() implements Ask, Op<Ask, Integer, Question> {}
     }
 
     @Test

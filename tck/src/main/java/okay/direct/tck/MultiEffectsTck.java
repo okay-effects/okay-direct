@@ -8,14 +8,14 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import okay.direct.Body;
-import okay.direct.Eff;
+import okay.effect.Eff;
 import okay.direct.Effect;
 import okay.direct.Effects;
 import okay.direct.Fx;
 import okay.direct.Handler;
 import okay.direct.MultiEffects;
 import okay.direct.Program;
-import okay.direct.Pure;
+import okay.effect.Pure;
 import okay.direct.TailHandler;
 import okay.direct.std.Delimited;
 import okay.direct.std.Delimited.Prompt;
@@ -149,7 +149,7 @@ public abstract class MultiEffectsTck extends EffectsTck {
 
     @Test
     void choicesInARowAndTheOrderOfHandlersIsTheMeaning() {
-        Program<Eff<Choose, Eff<State<Integer>, Pure>>, Integer> p = fx -> {
+        Program<Integer, Eff<Choose, Eff<State<Integer>, Pure>>> p = fx -> {
             Effect<State<Integer>> state = Fx.second(fx);
             int x = Choose.flip(Fx.head(fx)) ? 1 : 2;
             State.put(state, State.get(state) + x);
@@ -177,7 +177,7 @@ public abstract class MultiEffectsTck extends EffectsTck {
                 return multi.handle(handler, body);
             }
         };
-        Program<Eff<Choose, Pure>, Boolean> p = fx -> Choose.flip(Fx.head(fx));
+        Program<Boolean, Eff<Choose, Pure>> p = fx -> Choose.flip(Fx.head(fx));
         assertThrows(IllegalStateException.class, () -> Fx.run(other, Choose.collect(multi, p)));
     }
 }

@@ -7,8 +7,8 @@ import okay.direct.Effects;
 
 /** A sensitive effect: its operations Audited.Ops, so performed only under an audit. */
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String> {}
-    record Balance() implements Pay, Audited.Op<Pay, Integer> {}
+    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
+    record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
 
     /** A bank with {@code balance}: an ordinary handler of Pay, installed by Audit.handle. */
     static <A, E extends Exception> A bank(Effects effects, int balance, Audit.VaultBody<Pay, A, E> body) throws E {

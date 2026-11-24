@@ -15,7 +15,7 @@ import okay.direct.Answer;
 import okay.direct.DetachedEffects;
 import okay.direct.DetachedHandler;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.Later;
 import okay.direct.TailHandler;
@@ -34,7 +34,7 @@ import okay.direct.TailHandler;
  * }</pre>
  */
 public sealed interface Emits<A> {
-    record Emit<A>(A value) implements Emits<A>, Op<Emits<A>, Void> {}
+    record Emit<A>(A value) implements Emits<A>, Op<Emits<A>, Void, Emit<A>> {}
 
     /** The value given out; the body goes on when it has been taken. */
     static <A> void emit(Effect<Emits<A>> out, A value) {

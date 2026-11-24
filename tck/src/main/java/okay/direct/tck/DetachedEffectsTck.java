@@ -17,7 +17,7 @@ import okay.direct.Body;
 import okay.direct.DetachedEffects;
 import okay.direct.DetachedHandler;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.Later;
 import okay.direct.TailHandler;
@@ -53,7 +53,7 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
     }
 
     sealed interface Prices {
-        record Price(String item) implements Prices, Op<Prices, Optional<Integer>> {}
+        record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price> {}
     }
 
     static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
@@ -91,7 +91,7 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
     }
 
     sealed interface Ask {
-        record Question() implements Ask, Op<Ask, Integer> {}
+        record Question() implements Ask, Op<Ask, Integer, Question> {}
     }
 
     @Test

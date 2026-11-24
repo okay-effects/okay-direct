@@ -43,7 +43,7 @@ abstract class FrontEndTck:
   @Test def aGeneralHandlerResumesAndWrapsTheRest(): Unit =
     val result = handle(new Handler[Reader[Int], Int, String]:
       def value(a: Int) = s"value $a"
-      def apply[X](op: Reader[Int] & Effect.Op[Reader[Int], X], k: X => String) = op match
+      def apply[X](op: Reader[Int] & Op[Reader[Int], X], k: X => String) = op match
         case Reader.Ask() => s"[${k(20)}]"
     )(Reader.ask[Int] + Reader.ask[Int])
     assertEquals("[[value 40]]", result)
@@ -61,7 +61,7 @@ abstract class FrontEndTck:
     assertThrows(classOf[IllegalStateException], () =>
       handle(new Handler[Reader[Boolean], Boolean, Boolean]:
         def value(a: Boolean) = a
-        def apply[X](op: Reader[Boolean] & Effect.Op[Reader[Boolean], X], k: X => Boolean) = op match
+        def apply[X](op: Reader[Boolean] & Op[Reader[Boolean], X], k: X => Boolean) = op match
           case Reader.Ask() => k(true) && k(false)
       )(Reader.ask[Boolean])
     )

@@ -10,7 +10,7 @@ import okay.direct.{Effect, Effects, MultiEffects}
 sealed trait Reset[R]
 
 object Reset {
-  final case class Shift0[R, A](body: (A => R) => R) extends Reset[R] with Effect.Op[Reset[R], A]
+  final case class Shift0[R, A](body: (A => R) => R) extends Reset[R] with Op[Reset[R], A]
 }
 
 /** The prompt of a reset whose answer is R. */

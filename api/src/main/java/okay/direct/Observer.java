@@ -1,5 +1,6 @@
 package okay.direct;
 
+import okay.effect.Op;
 /**
  * AN OBSERVER OF EVERY EFFECT: {@link #watch} makes an implementation whose every capability, of every handler
  * installed through it, shows each operation to the observer first, at the {@code perform}. It sees the operation
@@ -13,7 +14,7 @@ public interface Observer {
     /** An operation seen: what it is, and the way on to its handler. */
     interface Seen<X> {
         /** The operation, as it is: data. */
-        Effect.Op<?, X> op();
+        Op<?, X, ?> op();
 
         /** The effect's name: the sealed interface the operation is a case of. */
         default String effect() {

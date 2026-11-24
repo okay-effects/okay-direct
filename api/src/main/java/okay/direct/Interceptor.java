@@ -1,5 +1,6 @@
 package okay.direct;
 
+import okay.effect.Op;
 /**
  * AN INTERCEPTOR of the operations of one effect, the cases {@code C} of the family {@code F}: each operation
  * performed through the capability it guards comes to it first, at the {@code perform}, before any handler. It may
@@ -18,7 +19,7 @@ public interface Interceptor<C, F> {
 
     /** The operation passed on, past the interceptor, to the capability it guards. */
     interface Pass<F> {
-        <X> X pass(Effect.Op<F, X> op);
+        <X> X pass(Op<F, X, ?> op);
     }
 
     /** The capability {@code outer} with each of its operations through {@code interceptor} first. */

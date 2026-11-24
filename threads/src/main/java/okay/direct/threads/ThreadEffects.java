@@ -1,5 +1,6 @@
 package okay.direct.threads;
 
+import okay.effect.Op;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -57,7 +58,7 @@ public final class ThreadEffects implements DetachedEffects {
 
     /** What the body hands its handler: an operation and where to answer it, or that it has ended. */
     private sealed interface Event {}
-    private record Performed(Effect.Op<?, ?> op, Handoff<Reply> reply) implements Event {}
+    private record Performed(Op<?, ?, ?> op, Handoff<Reply> reply) implements Event {}
     private record Ended() implements Event {}
     private record Reply(Object answer, boolean abandoned) {}
 
@@ -91,7 +92,7 @@ public final class ThreadEffects implements DetachedEffects {
 
         @Override
         @SuppressWarnings("unchecked") // the answer resume() was given with this very operation as its witness: an X
-        public <X> X perform(Op<F, X> op) {
+        public <X> X perform(Op<F, X, ?> op) {
             if (abandoned) throw new Abandoned(this);
             if (!within()) throw new IllegalStateException("performed outside its body: " + op);
             put(handler, new Performed(op, replies));
@@ -125,7 +126,7 @@ public final class ThreadEffects implements DetachedEffects {
             return (E) failure;
         }
 
-        @SuppressWarnings("unchecked") // an Op<F, X> is one of F's operations: an F
+        @SuppressWarnings("unchecked") // an Op<F, X, ?> is one of F's operations: an F
         private F operation(Performed p) {
             return (F) p.op();
         }
@@ -245,7 +246,7 @@ public final class ThreadEffects implements DetachedEffects {
             }
 
             @Override
-            public <X> void answer(Op<F, X> op, X value) {
+            public <X> void answer(Op<F, X, ?> op, X value) {
                 if (op != performed.op()) throw new IllegalArgumentException("resumed with " + op + ", not with " + performed.op());
                 if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 put(performed.reply(), new Reply(value, false));
@@ -278,13 +279,13 @@ public final class ThreadEffects implements DetachedEffects {
             }
 
             @Override
-            public <X> R resume(Op<F, X> op, X value) throws E {
+            public <X> R resume(Op<F, X, ?> op, X value) throws E {
                 answer(op, value);
                 return handle(handler);
             }
 
             @Override
-            public <X> void answer(Op<F, X> op, X value) {
+            public <X> void answer(Op<F, X, ?> op, X value) {
                 if (op != performed.op()) throw new IllegalArgumentException("resumed with " + op + ", not with " + performed.op());
                 if (!fresh) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 fresh = false;

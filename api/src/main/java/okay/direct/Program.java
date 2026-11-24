@@ -4,8 +4,8 @@ package okay.direct;
  * A program in direct style whose type says what it may do: it runs with the capabilities of its row {@code R}
  * (see {@link Eff}) and returns an A.
  *
- * <p>A handler takes the first place of the row: {@link Fx#handle} turns a {@code Program<Eff<F, R>, A>} into a
- * {@code Program<R, B>}; {@link Fx#run} runs a {@code Program<Pure, A>}. A method whose parameter is an open row
+ * <p>A handler takes the first place of the row: {@link Fx#handle} turns a {@code Program<A, Eff<F, R>>} into a
+ * {@code Program<B, R>}; {@link Fx#run} runs a {@code Program<A, Pure>}. A method whose parameter is an open row
  * ({@code Fx<? extends Eff<State<Integer>, ?>>}) is a program of every row that starts so.
  *
  * <p>A program throws no checked exception: an error it may end with is an effect of its row
@@ -15,6 +15,6 @@ package okay.direct;
  * soon as two handlers are nested.)
  */
 @FunctionalInterface
-public interface Program<R, A> {
+public interface Program<A, R> {
     A run(Fx<R> fx);
 }

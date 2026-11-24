@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import okay.direct.Answer;
-import okay.direct.Eff;
+import okay.effect.Eff;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.Fx;
 import okay.direct.Program;
-import okay.direct.Pure;
+import okay.effect.Pure;
 import okay.direct.TailHandler;
 import okay.direct.std.Fail;
 import okay.direct.std.Reader;
@@ -27,7 +27,7 @@ interface RowsTests {
 
     /** An effect of the tests: a line logged. */
     sealed interface Log {
-        record Line(String text) implements Log, Op<Log, Void> {}
+        record Line(String text) implements Log, Op<Log, Void, Line> {}
     }
 
     static void log(Effect<Log> log, String text) {
@@ -37,7 +37,7 @@ interface RowsTests {
     /** The lines a program logged, and its value. */
     record Logged<A>(List<String> lines, A value) {}
 
-    static <R, A> Program<R, Logged<A>> logged(Program<Eff<Log, R>, A> program) {
+    static <R, A> Program<Logged<A>, R> logged(Program<A, Eff<Log, R>> program) {
         var lines = new ArrayList<String>();
         return Fx.handle(new TailHandler<Log, A, Logged<A>>() {
             @Override
@@ -88,14 +88,14 @@ interface RowsTests {
 
     @Test
     default void twoPlacesOfOneEffectAreTwoPlaces() {
-        Program<Eff<Reader<String>, Eff<Reader<Integer>, Pure>>, String> both =
+        Program<String, Eff<Reader<String>, Eff<Reader<Integer>, Pure>>> both =
                 fx -> Reader.ask(Fx.head(fx)) + Reader.ask(Fx.second(fx));
         assertEquals("n=3", Fx.run(effects(), Reader.run(3, Reader.run("n=", both))));
     }
 
     @Test
     default void aFailureDropsTheRestAndTheOrderOfHandlersIsTheMeaning() {
-        Program<Eff<Fail<String>, Eff<State<Integer>, Pure>>, Integer> p = fx -> {
+        Program<Integer, Eff<Fail<String>, Eff<State<Integer>, Pure>>> p = fx -> {
             Effect<State<Integer>> state = Fx.second(fx);
             State.put(state, 1);
             Fail.raise(Fx.head(fx), "stop");
@@ -128,13 +128,13 @@ interface RowsTests {
 
     @Test
     default void checkedExceptionsMeetTheRowAtItsEnds() {
-        Program<Eff<Fail<java.io.IOException>, Pure>, String> read = fx -> Fail.catching(Fx.head(fx),
+        Program<String, Eff<Fail<java.io.IOException>, Pure>> read = fx -> Fail.catching(Fx.head(fx),
                 java.io.IOException.class, () -> {
                     throw new java.io.FileNotFoundException("no.txt");
                 });
         var thrown = assertThrows(java.io.IOException.class, () -> Fail.rethrow(effects(), read));
         assertEquals("no.txt", thrown.getMessage());
-        Program<Eff<Fail<java.io.IOException>, Pure>, String> fine = fx -> Fail.catching(Fx.head(fx),
+        Program<String, Eff<Fail<java.io.IOException>, Pure>> fine = fx -> Fail.catching(Fx.head(fx),
                 java.io.IOException.class, () -> "text");
         assertEquals("text", assertDoesNotThrow(() -> Fail.rethrow(effects(), fine)));
     }

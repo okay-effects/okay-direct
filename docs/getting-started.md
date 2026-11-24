@@ -127,12 +127,12 @@ an item with no price. It is checked against the release 0.1.0, run on a virtual
 about 0.85 s.
 
 **The effect and the program.** An effect is a sealed interface, its operations records implementing it and
-`Effect.Op<Effect, Answer>`. The program takes the capabilities it needs:
+`Op<Effect, Answer, Self>` (okay-java-api's `okay.effect.Op`, Self the record itself). The program takes the capabilities it needs:
 
 ```java
 // the effect: one operation, as data — Price(item) is answered by an Integer
 sealed interface Prices {
-    record Price(String item) implements Prices, Op<Prices, Optional<Integer>> {}   // an item may have no price
+    record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price> {}   // an item may have no price
 }
 
 // the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
@@ -220,7 +220,7 @@ What is unusual here:
 - **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
   a handler of prices there is no capability to call it with: it does not compile.
 
-The imports: `java.util.Optional`, `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.direct.{Answer, Body, Effect, Effect.Op,
+The imports: `java.util.Optional`, `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.effect.Op`, `okay.direct.{Answer, Body, Effect,
 Effects, Interceptor, TailHandler}`,
 `okay.direct.loom.LoomEffects`, `okay.direct.std.{Fail, Trail}`. A handler that resumes the rest, or does not, or wraps
 what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).

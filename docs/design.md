@@ -30,7 +30,7 @@ The JVM gives three such runtimes, each an implementation: Loom's internal conti
 
 An effect is a GADT: `Get` is answered by `S`, `Put` by `Unit`. Java, like Kotlin, does not refine a type parameter
 in a `switch` case: in `case Get<S> g`, the answer type `X` is not known to be `S`. So the operation itself is the
-WITNESS: an operation is an `Effect.Op<F, X>`, and a handler answers with `k.answer(op, value)` — `value` must be the
+WITNESS: an operation is an `Op<F, X, Self>` (okay-java-api's `okay.effect.Op`), and a handler answers with `k.answer(op, value)` — `value` must be the
 `X` of `op`. It compiles only with an answer of the right type; the implementations check that the witness is the very
 operation being handled. The alternatives were weighed:
 

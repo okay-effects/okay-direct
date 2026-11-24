@@ -2,7 +2,7 @@ package okay.direct.std;
 
 import java.util.function.Function;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.Handler;
 import okay.direct.MultiEffects;
@@ -52,7 +52,7 @@ public final class Delimited {
     /** The control effect of a reset whose answer is R. */
     private sealed interface Control<R> {}
 
-    private record Shift0<R, A>(Shift<A, R> body) implements Control<R>, Op<Control<R>, A> {
+    private record Shift0<R, A>(Shift<A, R> body) implements Control<R>, Op<Control<R>, A, Shift0<R, A>> {
         R run(Resume<Control<R>, R, RuntimeException> k) {
             return body.apply(answer -> k.resume(this, answer));
         }

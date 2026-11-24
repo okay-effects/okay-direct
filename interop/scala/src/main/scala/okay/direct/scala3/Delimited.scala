@@ -8,7 +8,7 @@ import okay.direct.{Effect, Effects, MultiEffects}
  * answer type `R` is the reset's throughout. `reset`'s `k` is one-shot, `resetMulti`'s, on a `MultiEffects`, not.
  */
 enum Reset[R]:
-  case Shift0[R, A](body: (A => R) => R) extends Reset[R], Effect.Op[Reset[R], A]
+  case Shift0[R, A](body: (A => R) => R) extends Reset[R], Op[Reset[R], A]
 
 /** The prompt of a reset whose answer is R. */
 final class Prompt[R](effect: Effect[Reset[R]]):
@@ -22,7 +22,7 @@ def shift0[A, R](body: (A => R) => R)(using prompt: Prompt[R]): A = prompt.shift
 def reset[R](body: Prompt[R] ?=> R)(using Effects): R =
   handle(new Handler[Reset[R], R, R]:
     def value(r: R) = r
-    def apply[X](op: Reset[R] & Effect.Op[Reset[R], X], k: X => R): R = op match
+    def apply[X](op: Reset[R] & Op[Reset[R], X], k: X => R): R = op match
       case Reset.Shift0(f) => f(k)
   )(body(using Prompt(summon[Effect[Reset[R]]])))
 
@@ -30,7 +30,7 @@ def reset[R](body: Prompt[R] ?=> R)(using Effects): R =
 def resetMulti[R](body: Prompt[R] ?=> R)(using MultiEffects): R =
   handle(new MultiHandler[Reset[R], R, R]:
     def value(r: R) = r
-    def apply[X](op: Reset[R] & Effect.Op[Reset[R], X], k: X => R): R = op match
+    def apply[X](op: Reset[R] & Op[Reset[R], X], k: X => R): R = op match
       case Reset.Shift0(f) => f(k)
   )(body(using Prompt(summon[Effect[Reset[R]]])))
 

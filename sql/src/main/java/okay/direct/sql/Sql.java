@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import okay.direct.Answer;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Interceptor;
 
 /**
@@ -29,10 +29,10 @@ import okay.direct.Interceptor;
  */
 public sealed interface Sql {
     /** The rows a query selects, each mapped. */
-    record Query<T>(String text, List<Object> parameters, Rows<T> rows) implements Sql, Op<Sql, List<T>> {}
+    record Query<T>(String text, List<Object> parameters, Rows<T> rows) implements Sql, Op<Sql, List<T>, Query<T>> {}
 
     /** A change: the number of rows changed. */
-    record Update(String text, List<Object> parameters) implements Sql, Op<Sql, Integer> {}
+    record Update(String text, List<Object> parameters) implements Sql, Op<Sql, Integer, Update> {}
 
     /** A row mapped to a value. */
     @FunctionalInterface

@@ -28,8 +28,8 @@ import okay.direct.{Effect, Effects}
 import okay.direct.scala3.*
 
 enum State[S]:
-  case Get[S]() extends State[S], Effect.Op[State[S], S]
-  case Put[S](value: S) extends State[S], Effect.Op[State[S], Unit]
+  case Get[S]() extends State[S], Op[State[S], S]
+  case Put[S](value: S) extends State[S], Op[State[S], Unit]
 
 def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Fail[String]]): Int =
   val base = Reader.ask[Int]
@@ -41,11 +41,11 @@ given Effects = LoomEffects()
 Reader.run(42)(State.run(0)(Fail.attempt(program(true))))     // (1, Right(42))
 ```
 
-A clause gets the operation as `E & Effect.Op[E, X]` and returns its answer; the match is exhaustive, and in each case
+A clause gets the operation as `E & Op[E, X]` and returns its answer; the match is exhaustive, and in each case
 `X` is known, so there is no witness and no cast:
 
 ```scala
-def apply[X](s: S, op: State[S] & Effect.Op[State[S], X]): (X, S) = op match
+def apply[X](s: S, op: State[S] & Op[State[S], X]): (X, S) = op match
   case Get() => (s, s)
   case Put(next) => ((), next)
 ```
@@ -66,8 +66,8 @@ import okay.direct.scala2._
 
 sealed trait State[S]
 object State {
-  final case class Get[S]() extends State[S] with Effect.Op[State[S], S]
-  final case class Put[S](value: S) extends State[S] with Effect.Op[State[S], Unit]
+  final case class Get[S]() extends State[S] with Op[State[S], S]
+  final case class Put[S](value: S) extends State[S] with Op[State[S], Unit]
 }
 
 def program(heads: Boolean)(implicit r: Effect[Reader[Int]], s: Effect[State[Int]], f: Effect[Fail[String]]): Int = ...
@@ -87,11 +87,11 @@ Scala 3 (top level of `okay.direct.scala3`) — the interceptor's clause returns
 
 ```scala
 enum Pay:
-  case Transfer(to: String, amount: Int) extends Pay, Audited.Op[Pay, String]
-  case Balance() extends Pay, Audited.Op[Pay, Int]
+  case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
+  case Balance() extends Pay, AuditedOp[Pay, Int]
 
 def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]) = new Interceptor[Pay, Audited[Pay]]:
-  def apply[X](op: Pay & Effect.Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+  def apply[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
     case Pay.Transfer(to, amount) if amount > limit => Trail.record(s"refused: $amount"); Fail.raise("refused")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim.toUpperCase, amount))
     case Pay.Balance() => pass(Pay.Balance())

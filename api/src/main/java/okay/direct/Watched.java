@@ -1,5 +1,6 @@
 package okay.direct;
 
+import okay.effect.Op;
 /** An implementation whose capabilities show each operation to an observer first. */
 class Watched implements Effects {
     /** Bound while an observer's clause runs: its own operations are not shown to it. */
@@ -26,11 +27,11 @@ class Watched implements Effects {
     final <F> Effect<F> watched(Effect<F> effect) {
         return new Effect<>() {
             @Override
-            public <X> X perform(Op<F, X> op) {
+            public <X> X perform(Op<F, X, ?> op) {
                 if (OBSERVING.isBound()) return effect.perform(op);
                 Observer.Seen<X> seen = new Observer.Seen<>() {
                     @Override
-                    public Op<?, X> op() {
+                    public Op<?, X, ?> op() {
                         return op;
                     }
 

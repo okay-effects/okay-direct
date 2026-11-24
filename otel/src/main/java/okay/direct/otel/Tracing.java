@@ -1,5 +1,6 @@
 package okay.direct.otel;
 
+import okay.effect.Op;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
@@ -32,7 +33,7 @@ public final class Tracing {
     }
 
     /** The same, each operation written into its span, as {@code okay.op}, as {@code describe} says (null: not). */
-    public static Effects traced(Effects effects, Tracer tracer, Function<Effect.Op<?, ?>, String> describe) {
+    public static Effects traced(Effects effects, Tracer tracer, Function<Op<?, ?, ?>, String> describe) {
         return Observer.watch(effects, observer(tracer, describe));
     }
 
@@ -43,12 +44,12 @@ public final class Tracing {
 
     /** The same, each operation written into its span as {@code describe} says. */
     public static DetachedEffects traced(DetachedEffects effects, Tracer tracer,
-            Function<Effect.Op<?, ?>, String> describe) {
+            Function<Op<?, ?, ?>, String> describe) {
         return Observer.watch(effects, observer(tracer, describe));
     }
 
     /** The observer making the spans: to combine with another. */
-    public static Observer observer(Tracer tracer, Function<Effect.Op<?, ?>, String> describe) {
+    public static Observer observer(Tracer tracer, Function<Op<?, ?, ?>, String> describe) {
         return new Observer() {
             @Override
             public <X> X observe(Seen<X> seen) {

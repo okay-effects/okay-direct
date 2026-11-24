@@ -1,5 +1,6 @@
 package okay.direct.espresso;
 
+import okay.effect.Op;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -139,7 +140,7 @@ abstract class Handling<F, A, R, E extends Exception> {
             performed = new Driver.Performed(performed.op(), performer);
         }
 
-        final void check(Effect.Op<?, ?> op) {
+        final void check(Op<?, ?, ?> op) {
             if (op != performed.op()) throw new IllegalArgumentException("resumed with " + op + ", not " + performed.op());
         }
     }
@@ -256,7 +257,7 @@ abstract class Handling<F, A, R, E extends Exception> {
 
             @Override
             @SuppressWarnings("unchecked") // the handling of a Once<F, A, R, E> is a General<F, A, R, E>
-            public <X> R resume(Effect.Op<F, X> op, X answer) throws E {
+            public <X> R resume(Op<F, X, ?> op, X answer) throws E {
                 check(op);
                 if (!fresh) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 fresh = false;
@@ -375,7 +376,7 @@ abstract class Handling<F, A, R, E extends Exception> {
         }
 
         @Override
-        public <X> void answer(Effect.Op<F, X> op, X value) {
+        public <X> void answer(Op<F, X, ?> op, X value) {
             check(op);
             if (given) throw new IllegalStateException(op + " answered twice");
             given = true;
@@ -436,7 +437,7 @@ abstract class Handling<F, A, R, E extends Exception> {
 
             @Override
             @SuppressWarnings("unchecked") // the handling of a Many<F, A, R, E> is a Multi<F, A, R, E>
-            public <X> R resume(Effect.Op<F, X> op, X answer) throws E {
+            public <X> R resume(Op<F, X, ?> op, X answer) throws E {
                 check(op);
                 resumed = true;
                 var h = (Multi<F, A, R, E>) handling;
@@ -456,7 +457,7 @@ abstract class Handling<F, A, R, E extends Exception> {
 
         @Override
         @SuppressWarnings("unchecked") // the answer given with this very operation as its witness: an X
-        public <X> X perform(Op<F, X> op) {
+        public <X> X perform(Op<F, X, ?> op) {
             var driver = Driver.current();
             if (driver.running == null) throw new IllegalStateException("performed outside its body: " + op);
             var reply = driver.ask(new Driver.Perform(key, op));

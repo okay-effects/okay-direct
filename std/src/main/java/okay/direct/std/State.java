@@ -2,9 +2,9 @@ package okay.direct.std;
 
 import okay.direct.Answer;
 import okay.direct.Body;
-import okay.direct.Eff;
+import okay.effect.Eff;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Fx;
 import okay.direct.Effects;
 import okay.direct.StatefulHandler;
@@ -12,8 +12,8 @@ import okay.direct.Program;
 
 /** A state of type S, read and written. */
 public sealed interface State<S> {
-    record Get<S>() implements State<S>, Op<State<S>, S> {}
-    record Put<S>(S value) implements State<S>, Op<State<S>, Void> {}
+    record Get<S>() implements State<S>, Op<State<S>, S, Get<S>> {}
+    record Put<S>(S value) implements State<S>, Op<State<S>, Void, Put<S>> {}
 
     static <S> S get(Effect<State<S>> state) {
         return state.perform(new Get<>());
@@ -51,7 +51,7 @@ public sealed interface State<S> {
     }
 
     /** In a row: the program's first place answered by a state from {@code initial}; a program of the rest. */
-    static <S, R, A> Program<R, Final<S, A>> run(S initial, Program<Eff<State<S>, R>, A> program) {
+    static <S, R, A> Program<Final<S, A>, R> run(S initial, Program<A, Eff<State<S>, R>> program) {
         return outer -> run(outer.effects(), initial, state -> program.run(Fx.with(state, outer)));
     }
 }

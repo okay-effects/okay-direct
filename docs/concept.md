@@ -1,15 +1,16 @@
-# The concept: what algebraic effects are, and how to work with them
+# The concept, in okay-direct
 
-This is the stable picture the okay-effects family is built to: what an effect is, the invariants every library
-keeps, how the styles of writing a program (types, direct style, parameters, exceptions, data) are one model seen
-from different sides, and what makes it an industrial standard rather than a library. The [guide](guide.md) is the
-API; [design](design.md) the reasons for its details; [okay-effects](https://github.com/okay-effects/okay-effects)
-the reference model of the same concept in Scala 3, Java and Rust.
+The family's concept — the invariants, one name for one thing in every library, the ways of writing a program as
+one model — is okay-effects' [CONCEPT.md](https://github.com/okay-effects/okay-effects/blob/master/CONCEPT.md); the model
+exactly its SPEC.md. This page is that concept as okay-direct implements it in Java: the styles, the rows, how to
+work, and what makes it an industrial standard. Its vocabulary is okay-java-api's, package `okay.effect` (`Op`,
+`Eff`, `Pure`), the same types okay-java's programs as data use. The [guide](guide.md) is the API;
+[design](design.md) the reasons for its details.
 
 ## 1. Three nouns
 
 - **An operation** is a request, and it is DATA: a record with the question's arguments, whose type says the type of
-  its answer (`record Price(String item) implements Prices, Op<Prices, Optional<Integer>>`).
+  its answer (`record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price>`).
 - **A handler** answers the operations of one effect: in place, or with the rest of the program in hand (the
   continuation `k`), which it resumes once, many times, or never.
 - **A program** asks operations and does nothing else to the world. Its type lists what it may ask: its **row**.
@@ -21,7 +22,7 @@ log, an audit are different handlers of the same program.
 
 ## 2. The invariants
 
-1. **An operation is data, its answer's type in its type.** `Op<F, X>`: a handler matching an operation learns the
+1. **An operation is data, its answer's type in its type.** `Op<F, X, Self>`: a handler matching an operation learns the
    type of the answer it owes; a wrong answer does not compile (the operation is the witness, `k.answer(op, x)`).
 2. **An effect is closed, a handler exhaustive.** An effect is a sealed interface; a handler is a `switch` over it with
    no default: a new operation breaks every handler that does not answer it, at compile time.
@@ -47,8 +48,8 @@ log, an audit are different handlers of the same program.
 
 | Style | What it is in the model | In okay-direct |
 |---|---|---|
-| **Types** | the row: what a program may ask, as a nested list in its type | `Eff<E, R>`, `Pure` |
-| **Direct style** | the program is ordinary code; `perform` a call that returns the answer | `Program<R, A>`, `Fx<R>` |
+| **Types** | the row: what a program may ask, as a nested list in its type | `okay.effect.Eff<E, R>`, `Pure` (okay-java-api) |
+| **Direct style** | the program is ordinary code; `perform` a call that returns the answer | `Program<A, R>`, `Fx<R>` |
 | **Parameters** | one place of the row given to code that needs only it | `Effect<F>` = `Fx.head(fx)` |
 | **Exceptions** | an error is an effect with a place in the row; Java's checked exceptions meet it at the ends | `Fail<E>`, `Fail.catching`, `Fail.rethrow` |
 | **Data** | the program as a value of operations and binds: inspected, sent, stored, resumed many times without frames | okay-effects' `Comp<A, R>` (same `Eff` row); `Reflection` |
@@ -74,7 +75,7 @@ static int step(Fx<? extends Eff<State<Integer>, ? extends Eff<Reader<Integer>, 
 State.Final<Integer, Integer> r = Fx.run(new LoomEffects(), Reader.run(10, State.run(0, Shop::step)));
 
 // errors: a checked exception into the row, and out of it at the end
-Program<Eff<Fail<IOException>, Pure>, String> read =
+Program<String, Eff<Fail<IOException>, Pure>> read =
         fx -> Fail.catching(Fx.head(fx), IOException.class, () -> Files.readString(path));
 String text = Fail.rethrow(effects, read);           // throws IOException
 ```
@@ -90,8 +91,8 @@ okay-effects' Java kernel:
   so typed is a program of every row that starts with these places. Closed rows (`Eff<A, Eff<B, Pure>>`) are for
   programs that say exactly what they do.
 - **A handler takes the first place**: `Fx.handle(handler, program)` and the standard forms (`State.run(0, p)`,
-  `Reader.run(env, p)`, `Fail.attempt(p)`, `Choose.collect(multi, p)`) turn a `Program<Eff<F, R>, A>` into a
-  `Program<R, B>`; `Fx.run` runs a `Program<Pure, A>`. A place left unhandled does not compile.
+  `Reader.run(env, p)`, `Fail.attempt(p)`, `Choose.collect(multi, p)`) turn a `Program<A, Eff<F, R>>` into a
+  `Program<B, R>`; `Fx.run` runs a `Program<A, Pure>`. A place left unhandled does not compile.
 - **A named row** (`interface Shop extends Eff<Prices, Eff<Log, Pure>> {}`) can be read (`head`, `second`) but not
   taken apart by handlers; `Fx.fit` widens a row's type.
 - **A program throws no checked exception.** An error is `Fail<E>` in the row. (A type parameter for the exception was
@@ -133,13 +134,14 @@ unhandled.
 What is NOT done, on purpose: a monad-only API (Java programmers would not read it); annotations and AOP
 (`@Effect`), which lose the types and the stack; multi-shot as a run-time flag; effect rows found by reflection.
 
-## 7. Where the family stands, and what is next
+## 7. Where it stands, and what is next
 
-- Done (okay-direct 0.1.1-SNAPSHOT): the row (`Eff`, `Pure`, `Fx`, `Program`) over the existing API, on every
-  implementation; row forms of `State`, `Reader`, `Fail`, `Choose`; `Fail.catching`/`Fail.rethrow`; TCK and
-  compile-time refusals.
-- Next: **one Java API.** Three exist today — okay-direct, okay-java (resumable bytecode), okay-kernel-api. The
-  standard is one: the api above, with okay-java's resumable transform as another implementation of its SPI, passing
-  the same TCK. Then: row forms for the remaining standard effects (`Trail`, `Emits`, `Async`, `Channel`), rows in the
-  Scala front ends (as context parameters they already carry the effects; the row is their type), the data style in
-  Java on the same `Eff` (okay-effects' `Comp`), and okay-audit's check that a capability does not escape its body.
+- Done (okay-direct 0.1.1-SNAPSHOT): the row (`Fx`, `Program<A, R>`) over the existing API, on every implementation;
+  row forms of `State`, `Reader`, `Fail`, `Choose`; `Fail.catching`/`Fail.rethrow`; TCK and compile-time refusals.
+  The vocabulary is okay-java-api's (`okay.effect.Op<E, X, Self>`, `Eff`, `Pure`), shared with okay-java; the Scala
+  front ends write `Op[F, X]` (an alias, the effect as `Self`).
+- Next, to the family's names (CONCEPT.md §6): `Throws` for `Fail`, `Emit` for `Emits`, `Clock` for `VirtualClock`,
+  `ret`/`on`/`answer` for `value`/`operation`, `observe` for `Observer.watch`, `Sensitive` on the effect for
+  `Audited.Op` on the operation; a handler's result `B`, never `R`. Then one SPI for direct style with okay-java's
+  resumable transform as an implementation, and `reify`/`reflect` between `Program<A, R>` and okay-java's
+  `Comp<A, R>`.

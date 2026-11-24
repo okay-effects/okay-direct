@@ -30,7 +30,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 
 | Type | What it is |
 |---|---|
-| `Effect.Op<F, X>` | an operation of the effect `F`, answered by an `X` |
+| `Op<F, X, Self>` (okay-java-api's `okay.effect.Op`) | an operation of the effect `F`, answered by an `X` |
 | `Effect<F>` | the capability to perform `F`'s operations, given to the body by `F`'s handler |
 | `Body<F, A, E>` | the handled body: run with the capability, it may throw the checked exception `E` |
 | `Handler<F, A, R, E>` | `value(a)`, and `operation(op, k)` with `k` the rest of the body, `Resume`: one-shot |
@@ -51,8 +51,8 @@ the witness of its answer's type, so `k.answer(get, state)` compiles only with a
 
 ```java
 public sealed interface State<S> {
-    record Get<S>() implements State<S>, Op<State<S>, S> {}
-    record Put<S>(S value) implements State<S>, Op<State<S>, Void> {}
+    record Get<S>() implements State<S>, Op<State<S>, S, Get<S>> {}
+    record Put<S>(S value) implements State<S>, Op<State<S>, Void, Put<S>> {}
 }
 
 public void operation(State<S> op, Answer<State<S>> k) {
@@ -69,7 +69,7 @@ its handlers are written apart, and change what it means without changing it:
 ```java
 // the effect: one operation, as data — Price(item) is answered by an Integer
 sealed interface Prices {
-    record Price(String item) implements Prices, Op<Prices, Optional<Integer>> {}   // an item may have no price
+    record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price> {}   // an item may have no price
 }
 
 // the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
@@ -246,8 +246,8 @@ implementation whose every capability shows each operation to the observer, its 
 
 ```java
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String> {}
-    record Balance() implements Pay, Audited.Op<Pay, Integer> {}
+    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
+    record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
 }
 
 Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
@@ -272,15 +272,15 @@ Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded, pay -> payments(pay)));
 ## Scala 3
 
 An effect is an enum, a GADT; a capability a context parameter; a body a context function. A clause gets the
-operation as `E & Effect.Op[E, X]` and returns the answer itself: GADT inference knows `X` in each case, so there
+operation as `E & Op[E, X]` and returns the answer itself: GADT inference knows `X` in each case, so there
 is no witness, and a missing handler does not compile.
 
 ```scala
 enum State[S]:
-  case Get[S]() extends State[S], Effect.Op[State[S], S]
-  case Put[S](value: S) extends State[S], Effect.Op[State[S], Unit]
+  case Get[S]() extends State[S], Op[State[S], S]
+  case Put[S](value: S) extends State[S], Op[State[S], Unit]
 
-def apply[X](op: State[S] & Effect.Op[State[S], X]): X = op match
+def apply[X](op: State[S] & Op[State[S], X]): X = op match
   case Get() => state
   case Put(s) => state = s
 
@@ -297,11 +297,11 @@ Control and audit in Scala 3: an interceptor's clause returns the answer, `X` kn
 
 ```scala
 enum Pay:
-  case Transfer(to: String, amount: Int) extends Pay, Audited.Op[Pay, String]
-  case Balance() extends Pay, Audited.Op[Pay, Int]
+  case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
+  case Balance() extends Pay, AuditedOp[Pay, Int]
 
 def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]) = new Interceptor[Pay, Audited[Pay]]:
-  def apply[X](op: Pay & Effect.Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+  def apply[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
     case Pay.Transfer(to, amount) if amount > limit => Fail.raise(s"refused: $amount")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim, amount))
     case Pay.Balance() => pass(Pay.Balance())

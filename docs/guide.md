@@ -26,15 +26,15 @@ Everything here is in `okay.direct` (the API, module `api`) and `okay.direct.std
 
 ## Effects and operations
 
-An effect is a sealed interface; its operations are records implementing both it and `Effect.Op<F, X>`, the effect
+An effect is a sealed interface; its operations are records implementing both it and `Op<F, X, Self>` (okay-java-api's `okay.effect.Op`), the effect
 `F` and the operation's answer type `X`:
 
 ```java
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 
 public sealed interface State<S> {
-    record Get<S>() implements State<S>, Op<State<S>, S> {}
-    record Put<S>(S value) implements State<S>, Op<State<S>, Void> {}
+    record Get<S>() implements State<S>, Op<State<S>, S, Get<S>> {}
+    record Put<S>(S value) implements State<S>, Op<State<S>, Void, Put<S>> {}
 }
 ```
 
@@ -188,7 +188,7 @@ static int step(Fx<? extends Eff<State<Integer>, ? extends Eff<Reader<Integer>, 
 Fx.run(fx, Reader.run(10, State.run(0, Shop::step)));      // Final[state=10, value=0]
 ```
 
-- `Program<R, A>` is a program of the row `R`; `Fx.handle(handler, p)` and the standard forms (`State.run(0, p)`,
+- `Program<A, R>` is a program of the row `R`; `Fx.handle(handler, p)` and the standard forms (`State.run(0, p)`,
   `Reader.run(env, p)`, `Fail.attempt(p)`, `Choose.collect(multi, p)`) handle its first place; `Fx.run` runs a
   program of `Pure`. Handlers in another order than the row, or a place left unhandled, do not compile.
 - Open rows (`? extends` at every step) fit into longer rows; `Fx.tail(fx)` gives the rest to a program of it.
@@ -257,8 +257,8 @@ Its operations are `Audited.Op`s, of the family `Audited<C>`:
 
 ```java
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String> {}
-    record Balance() implements Pay, Audited.Op<Pay, Integer> {}
+    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
+    record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
 }
 ```
 

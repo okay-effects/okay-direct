@@ -1,5 +1,6 @@
 package okay.direct.tck;
 
+import okay.effect.Eff;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 /** What the row's types refuse: each program here is compiled, and javac must reject it. */
 class RowTypesTest {
     private static final String HEADER = """
+            import okay.effect.*;
             import okay.direct.*;
             import okay.direct.std.*;
             class Snippet {

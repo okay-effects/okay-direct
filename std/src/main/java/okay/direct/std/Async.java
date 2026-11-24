@@ -14,7 +14,7 @@ import java.util.function.BiFunction;
 import okay.direct.Body;
 import okay.direct.DetachedEffects;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 
 /**
  * ASYNCHRONY IN DIRECT STYLE: {@code await(async, future)} is a method call that gives the future's value — and no
@@ -37,16 +37,16 @@ import okay.direct.Effect.Op;
  * that is always the same.
  */
 public sealed interface Async {
-    record Await<X>(CompletionStage<X> stage) implements Async, Op<Async, X> {}
+    record Await<X>(CompletionStage<X> stage) implements Async, Op<Async, X, Await<X>> {}
 
     /** A body of its own, started beside this one: answered by its task. */
-    record Fork<X>(Body<Async, X, ? extends Exception> body) implements Async, Op<Async, Task<X>> {}
+    record Fork<X>(Body<Async, X, ? extends Exception> body) implements Async, Op<Async, Task<X>, Fork<X>> {}
 
     /** A future completed after {@code delay}, by the run's clock. */
-    record Timer(Duration delay) implements Async, Op<Async, CompletableFuture<Void>> {}
+    record Timer(Duration delay) implements Async, Op<Async, CompletableFuture<Void>, Timer> {}
 
     /** The time, by the run's clock. */
-    record Now() implements Async, Op<Async, Instant> {}
+    record Now() implements Async, Op<Async, Instant, Now> {}
 
     /** The time of a run: what its sleeps and timeouts wait by. */
     interface Clock {

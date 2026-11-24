@@ -3,9 +3,9 @@ package okay.direct.std;
 import java.util.ArrayList;
 import java.util.List;
 import okay.direct.Body;
-import okay.direct.Eff;
+import okay.effect.Eff;
 import okay.direct.Effect;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.Fx;
 import okay.direct.MultiEffects;
 import okay.direct.MultiHandler;
@@ -14,7 +14,7 @@ import okay.direct.Program;
 
 /** A choice of two ways: its handler resumes the rest twice, so it runs only on a {@link MultiEffects}. */
 public sealed interface Choose {
-    record Flip() implements Choose, Op<Choose, Boolean> {}
+    record Flip() implements Choose, Op<Choose, Boolean, Flip> {}
 
     static boolean flip(Effect<Choose> choose) {
         return choose.perform(new Flip());
@@ -49,7 +49,7 @@ public sealed interface Choose {
      * In a row: every way the program's choices (its first place) can go; a program of the rest. Multi-shot is a
      * type: {@code effects} is the row's implementation, else the program throws {@link IllegalStateException}.
      */
-    static <R, A> Program<R, List<A>> collect(MultiEffects effects, Program<Eff<Choose, R>, A> program) {
+    static <R, A> Program<List<A>, R> collect(MultiEffects effects, Program<A, Eff<Choose, R>> program) {
         return outer -> {
             if (outer.effects() != effects)
                 throw new IllegalStateException("choices on another implementation than the row's");

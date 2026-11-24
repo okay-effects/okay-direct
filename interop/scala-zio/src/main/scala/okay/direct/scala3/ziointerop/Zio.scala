@@ -2,7 +2,7 @@ package okay.direct.scala3.ziointerop
 
 import zio.{Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.{Effect, Effects}
-import okay.direct.scala3.{Emits, Fail, Reader, TailHandler, handle}
+import okay.direct.scala3.{Emits, Fail, Op, Reader, TailHandler, handle}
 
 /**
  * ZIO AND THE DIRECT STYLE, each of ZIO's channels one of the effects: a `ZIO[R, E, A]` in a body has its environment
@@ -11,7 +11,7 @@ import okay.direct.scala3.{Emits, Fail, Reader, TailHandler, handle}
  * raise the ZIO's failure, a throw a defect; run on a blocking thread, interruptibly.
  */
 enum Zios:
-  case Run[A](zio: ZIO[Any, Nothing, A]) extends Zios, Effect.Op[Zios, A]
+  case Run[A](zio: ZIO[Any, Nothing, A]) extends Zios, Op[Zios, A]
 
 /** A ZIO in the body: its environment asked, its typed error raised, its run awaited. */
 def fromZIO[R, E, A](z: ZIO[R, E, A])(using Effect[Reader[ZEnvironment[R]]], Effect[Fail[E]], Effect[Zios]): A =
@@ -29,7 +29,7 @@ def await[A](z: ZIO[Any, Throwable, A])(using zios: Effect[Zios]): A =
 private def running[A](runtime: Runtime[Any])(body: Effect[Zios] ?=> A)(using Effects): A =
   handle(new TailHandler[Zios, A, A]:
     def value(a: A) = a
-    def apply[X](op: Zios & Effect.Op[Zios, X]): X = op match
+    def apply[X](op: Zios & Op[Zios, X]): X = op match
       case Zios.Run(z) => Unsafe.unsafe(implicit unsafe => runtime.unsafe.run(z).getOrThrowFiberFailure())
   )(body)
 
@@ -102,7 +102,7 @@ def toStream[A](body: (Effect[Emits[A]], Effect[Zios]) ?=> Unit)(using Effects):
       producer = toTask:
         handle(new TailHandler[Emits[A], Unit, Unit]:
           def value(u: Unit) = ()
-          def apply[X](op: Emits[A] & Effect.Op[Emits[A], X]): X = op match
+          def apply[X](op: Emits[A] & Op[Emits[A], X]): X = op match
             case Emits.Emit(a) => await(queue.offer(zio.stream.Take.single(a))); ()
         )(body)
       _ <- producer.foldCauseZIO(cause => queue.offer(zio.stream.Take.failCause(cause)), _ => queue.offer(zio.stream.Take.end)).forkScoped

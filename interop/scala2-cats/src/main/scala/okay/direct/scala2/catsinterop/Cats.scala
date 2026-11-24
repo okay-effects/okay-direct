@@ -4,13 +4,13 @@ import cats.effect.IO
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.IORuntime
 import okay.direct.{Effect, Effects}
-import okay.direct.scala2.{Affine, Answer, Emits, Monad, TailHandler, handle}
+import okay.direct.scala2.{Op, Affine, Answer, Emits, Monad, TailHandler, handle}
 
 /** IOs awaited in a direct-style body. */
 sealed trait Awaits
 
 object Awaits {
-  final case class Await[A](io: IO[A]) extends Awaits with Effect.Op[Awaits, A]
+  final case class Await[A](io: IO[A]) extends Awaits with Op[Awaits, A]
 }
 
 /**

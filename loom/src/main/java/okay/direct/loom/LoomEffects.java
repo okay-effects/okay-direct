@@ -1,5 +1,6 @@
 package okay.direct.loom;
 
+import okay.effect.Op;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -66,7 +67,7 @@ public final class LoomEffects implements DetachedEffects {
         private final Continuation continuation;
         private A value;
         private Throwable failure;
-        private Op<F, ?> pending;
+        private Op<F, ?, ?> pending;
         private Object answer;
         private boolean abandoned;
         /** ANSWERED IN PLACE: a tail handler's clause, called at the perform on the body's own stack — no yield, no
@@ -83,7 +84,7 @@ public final class LoomEffects implements DetachedEffects {
         private boolean answered;
         private final Answer<F> inPlaceAnswer = new Answer<>() {
             @Override
-            public <X> void answer(Op<F, X> op, X value) {
+            public <X> void answer(Op<F, X, ?> op, X value) {
                 if (op != pending) throw new IllegalArgumentException("resumed with " + op + ", not with " + pending);
                 if (answered) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 answered = true;
@@ -108,7 +109,7 @@ public final class LoomEffects implements DetachedEffects {
          * IllegalStateException. */
         @Override
         @SuppressWarnings("unchecked") // the answer resume() was given with this very operation as its witness: an X
-        public <X> X perform(Op<F, X> op) {
+        public <X> X perform(Op<F, X, ?> op) {
             if (abandoned) throw new Abandoned(this);
             if (tail != null) {
                 if (inClause || Continuation.getCurrentContinuation(scope) == null)
@@ -136,7 +137,7 @@ public final class LoomEffects implements DetachedEffects {
          * and handle throws the failure.
          */
         @SuppressWarnings("unchecked") // answered through inPlaceAnswer with this very operation as its witness: an X
-        private <X> X answeredInPlace(Op<F, X> op) {
+        private <X> X answeredInPlace(Op<F, X, ?> op) {
             pending = op;
             answered = false;
             inClause = true;
@@ -185,7 +186,7 @@ public final class LoomEffects implements DetachedEffects {
             return (E) failure;
         }
 
-        @SuppressWarnings("unchecked") // an Op<F, X> is one of F's operations: an F
+        @SuppressWarnings("unchecked") // an Op<F, X, ?> is one of F's operations: an F
         private F operation() {
             return (F) pending;
         }
@@ -276,14 +277,14 @@ public final class LoomEffects implements DetachedEffects {
         private final class Detached<R> implements Later<F> {
             private static final int IN_CLAUSE = 0, LEFT = 1, ANSWERED_IN_CLAUSE = 2;
 
-            private final Op<F, ?> op;
+            private final Op<F, ?, ?> op;
             private final DetachedHandler<F, A, R> handler;
             private final CompletableFuture<R> result;
             private final AtomicBoolean taken = new AtomicBoolean();
             private final AtomicInteger state = new AtomicInteger(IN_CLAUSE);
             private final Thread clause = Thread.currentThread();
 
-            Detached(Op<F, ?> op, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+            Detached(Op<F, ?, ?> op, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
                 this.op = op;
                 this.handler = handler;
                 this.result = result;
@@ -305,7 +306,7 @@ public final class LoomEffects implements DetachedEffects {
             }
 
             @Override
-            public <X> void answer(Op<F, X> op, X value) {
+            public <X> void answer(Op<F, X, ?> op, X value) {
                 if (op != this.op) throw new IllegalArgumentException("resumed with " + op + ", not with " + this.op);
                 if (!take()) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 answer = value;
@@ -328,23 +329,23 @@ public final class LoomEffects implements DetachedEffects {
         }
 
         private final class Once<R> implements Resume<F, R, E>, Answer<F> {
-            private final Op<F, ?> op;
+            private final Op<F, ?, ?> op;
             private final Handler<F, A, R, E> handler;
             private boolean fresh = true;
 
-            Once(Op<F, ?> op, Handler<F, A, R, E> handler) {
+            Once(Op<F, ?, ?> op, Handler<F, A, R, E> handler) {
                 this.op = op;
                 this.handler = handler;
             }
 
             @Override
-            public <X> R resume(Op<F, X> op, X value) throws E {
+            public <X> R resume(Op<F, X, ?> op, X value) throws E {
                 answer(op, value);
                 return handle(handler);
             }
 
             @Override
-            public <X> void answer(Op<F, X> op, X value) {
+            public <X> void answer(Op<F, X, ?> op, X value) {
                 if (op != this.op) throw new IllegalArgumentException("resumed with " + op + ", not with " + this.op);
                 if (!fresh) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 fresh = false;

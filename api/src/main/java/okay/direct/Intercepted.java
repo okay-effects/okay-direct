@@ -1,5 +1,6 @@
 package okay.direct;
 
+import okay.effect.Op;
 /** A capability whose operations go through an interceptor, at the perform, before the one it guards. */
 final class Intercepted<C, F> implements Effect<F> {
     private final Effect<F> outer;
@@ -13,7 +14,7 @@ final class Intercepted<C, F> implements Effect<F> {
 
     @Override
     @SuppressWarnings("unchecked") // an operation of F is one of the cases C; the answer is the one given with it
-    public <X> X perform(Op<F, X> op) {
+    public <X> X perform(Op<F, X, ?> op) {
         if (closed) throw new IllegalStateException("performed outside its audit: " + op);
         var k = new Given(op);
         interceptor.operation((C) op, outer::perform, k);
@@ -26,16 +27,16 @@ final class Intercepted<C, F> implements Effect<F> {
     }
 
     private final class Given implements Answer<F> {
-        private final Op<F, ?> op;
+        private final Op<F, ?, ?> op;
         private boolean given;
         private Object value;
 
-        Given(Op<F, ?> op) {
+        Given(Op<F, ?, ?> op) {
             this.op = op;
         }
 
         @Override
-        public <X> void answer(Op<F, X> op, X value) {
+        public <X> void answer(Op<F, X, ?> op, X value) {
             if (op != this.op) throw new IllegalArgumentException("answered " + op + ", not " + this.op);
             if (given) throw new IllegalStateException(op + " answered twice");
             given = true;

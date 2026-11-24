@@ -11,8 +11,8 @@ import Control._
 sealed trait Pay
 
 object Pay {
-  final case class Transfer(to: String, amount: Int) extends Pay with Audited.Op[Pay, String]
-  final case class Balance() extends Pay with Audited.Op[Pay, Int]
+  final case class Transfer(to: String, amount: Int) extends Pay with AuditedOp[Pay, String]
+  final case class Balance() extends Pay with AuditedOp[Pay, Int]
 
   def bank[A](balance: Int)(body: Audit.Vault[Pay] => A)(implicit fx: Effects): A = {
     var left = balance

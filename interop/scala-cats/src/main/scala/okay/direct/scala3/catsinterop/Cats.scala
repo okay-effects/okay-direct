@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.IORuntime
 import okay.direct.{Effect, Effects}
-import okay.direct.scala3.{Affine, Emits, Monad, TailHandler, handle}
+import okay.direct.scala3.{Affine, Emits, Monad, Op, TailHandler, handle}
 
 /**
  * CATS-EFFECT AND THE DIRECT STYLE. An `IO` in a body is AWAITED: run on cats-effect's runtime, the body waiting for
@@ -14,7 +14,7 @@ import okay.direct.scala3.{Affine, Emits, Monad, TailHandler, handle}
  * has returned, which a handler's continuation does not allow: await it instead.
  */
 enum Awaits:
-  case Await[A](io: IO[A]) extends Awaits, Effect.Op[Awaits, A]
+  case Await[A](io: IO[A]) extends Awaits, Op[Awaits, A]
 
 /** The IO run, the body waiting for its value; its failure thrown here. */
 def await[A](io: IO[A])(using awaits: Effect[Awaits]): A = awaits.perform(Awaits.Await(io))
@@ -22,7 +22,7 @@ def await[A](io: IO[A])(using awaits: Effect[Awaits]): A = awaits.perform(Awaits
 private def awaiting[A](run: [X] => IO[X] => X)(body: Effect[Awaits] ?=> A)(using Effects): A =
   handle(new TailHandler[Awaits, A, A]:
     def value(a: A) = a
-    def apply[X](op: Awaits & Effect.Op[Awaits, X]): X = op match
+    def apply[X](op: Awaits & Op[Awaits, X]): X = op match
       case Awaits.Await(io) => run(io)
   )(body)
 
@@ -93,7 +93,7 @@ def toStream[A](body: (Effect[Emits[A]], Effect[Awaits]) ?=> Unit)(using Effects
     val producer = toIO:
       handle(new TailHandler[Emits[A], Unit, Unit]:
         def value(u: Unit) = ()
-        def apply[X](op: Emits[A] & Effect.Op[Emits[A], X]): X = op match
+        def apply[X](op: Emits[A] & Op[Emits[A], X]): X = op match
           case Emits.Emit(a) => await(queue.offer(Some(a)))
       )(body)
     fs2.Stream.fromQueueNoneTerminated(queue).concurrently(fs2.Stream.eval(producer.flatMap(_ => queue.offer(None))))

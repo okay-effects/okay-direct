@@ -13,7 +13,7 @@ trait Interceptor[C, F] {
 
 /** An operation passed on, past the interceptor, to the capability it guards. */
 trait Pass[F] {
-  def apply[X](op: Effect.Op[F, X]): X
+  def apply[X](op: Op[F, X]): X
 }
 
 /** A handler of the sensitive effect C: each operation answered in place through `k`. */
@@ -26,8 +26,8 @@ object Control {
   private def toJava[C, F](i: Interceptor[C, F]): okay.direct.Interceptor[C, F] =
     new okay.direct.Interceptor[C, F] {
       def operation(op: C, pass: okay.direct.Interceptor.Pass[F], k: okay.direct.Answer[F]): Unit =
-        i(op, new Pass[F] { def apply[X](o: Effect.Op[F, X]): X = pass.pass(o) },
-          new Answer[F] { def apply[X](o: Effect.Op[F, X], x: X): Unit = k.answer(o, x) })
+        i(op, new Pass[F] { def apply[X](o: Op[F, X]): X = pass.pass(o) },
+          new Answer[F] { def apply[X](o: Op[F, X], x: X): Unit = k.answer(o, x) })
     }
 
   /** The body with the capability `outer` intercepted: each of its operations through `i` first. */
@@ -39,7 +39,7 @@ object Control {
     Audit.handle[C, A, R, RuntimeException](fx, new Audit.Handler[C, A, R] {
       def value(a: A): R = h.value(a)
       def operation(op: C, k: okay.direct.Answer[Audited[C]]): Unit =
-        h(op, new Answer[Audited[C]] { def apply[X](o: Effect.Op[Audited[C], X], x: X): Unit = k.answer(o, x) })
+        h(op, new Answer[Audited[C]] { def apply[X](o: Op[Audited[C], X], x: X): Unit = k.answer(o, x) })
     }, new Audit.VaultBody[C, A, RuntimeException] { def run(vault: Audit.Vault[C]): A = body(vault) })
 
   /** The body with C's capability, every operation of it through the interceptor `i` to the vault. */
@@ -56,7 +56,7 @@ object Control {
 sealed trait Trail
 
 object Trail {
-  final case class Record(line: String) extends Trail with Effect.Op[Trail, Unit]
+  final case class Record(line: String) extends Trail with Op[Trail, Unit]
 
   def record(line: String)(implicit trail: Effect[Trail]): Unit = trail.perform(Record(line))
 

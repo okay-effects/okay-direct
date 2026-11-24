@@ -20,17 +20,17 @@ sbt: `resolvers += "okay-direct" at "https://okay-effects.github.io/okay-direct/
 
 ### The model
 
-An effect is a sealed interface, its operations records implementing `Effect.Op<F, Answer>`. A program takes the
+An effect is a sealed interface, its operations records implementing `Op<F, Answer, Self>` (okay-java-api's `okay.effect.Op`, Self the record itself). A program takes the
 capabilities (`Effect<F>`) it needs as parameters; its signature lists what it may do. A handler is an exhaustive
 `switch` answering through `k`, the operation the witness of the answer's type. (Compiled and run against 0.1.0.)
 
 ```java
 import okay.direct.*;
-import okay.direct.Effect.Op;
+import okay.effect.Op;
 import okay.direct.std.Fail;
 
 sealed interface Prices {
-    record Price(String item) implements Prices, Op<Prices, Optional<Integer>> {}
+    record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price> {}
 }
 
 // the program: plain Java, performs inside a stream's lambda
@@ -61,7 +61,7 @@ Fail.attempt(fx, String.class, fail -> pricesFrom(fx, table, prices -> total(pri
 
 Rows (master, 0.1.1-SNAPSHOT): a program needing several effects takes ONE parameter typed by its row,
 `Fx<? extends Eff<State<Integer>, ? extends Eff<Log, ?>>>`, places by position (`Fx.head`, `Fx.second`, `Fx.tail`);
-`Program<R, A>`, `Fx.handle`, `State.run(0, p)`, `Fail.attempt(p)`, `Fx.run(fx, p)` for `Pure`; errors are `Fail` in the
+`Program<A, R>`, `Fx.handle`, `State.run(0, p)`, `Fail.attempt(p)`, `Fx.run(fx, p)` for `Pure`; errors are `Fail` in the
 row (`Fail.catching`/`Fail.rethrow`). The picture behind it: [docs/concept.md](docs/concept.md).
 
 Handler kinds: `TailHandler` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
@@ -89,7 +89,7 @@ operation through the interceptor first. A hand-written handler of `Audited<Pay>
 
 ```java
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String> {}
+    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
 }
 static <A, E extends Exception> A bank(Effects fx, Audit.VaultBody<Pay, A, E> body) throws E {
     return Audit.handle(fx, new Audit.Handler<Pay, A, A>() {

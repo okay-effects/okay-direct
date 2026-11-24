@@ -1,5 +1,7 @@
 package okay.direct;
 
+import okay.effect.Op;
+
 /**
  * The capability to perform the operations of {@code F}: given by F's handler to the body it handles.
  *
@@ -8,21 +10,10 @@ package okay.direct;
  * {@code perform} throws {@link IllegalStateException}.
  */
 public interface Effect<F> {
-    /** Suspends the body up to F's handler, and returns the answer the handler resumes it with. */
-    <X> X perform(Op<F, X> op);
-
     /**
-     * An operation of the effect {@code F}, answered by a value of type {@code X}. Operations are data.
-     *
-     * <p>An effect is a sealed interface, its operations records implementing both it and {@code Op}:
-     * <pre>{@code
-     * sealed interface State<S> {
-     *     record Get<S>() implements State<S>, Op<State<S>, S> {}
-     *     record Put<S>(S value) implements State<S>, Op<State<S>, Void> {}
-     * }
-     * }</pre>
-     * A handler matches an {@code F} exhaustively; the operation itself is the witness of its answer's type. An
-     * {@code Op<F, X>} must be an {@code F}: implementations hand it to F's handler as one.
+     * Suspends the body up to F's handler, and returns the answer the handler resumes it with. The operation is an
+     * okay-java-api {@link Op} of F, which names itself ({@code record Get<S>() implements State<S>,
+     * Op<State<S>, S, Get<S>>}): a class that names itself and is not an F does not compile.
      */
-    interface Op<F, X> {}
+    <X> X perform(Op<F, X, ?> op);
 }

@@ -1,5 +1,7 @@
 package okay.direct;
 
+import okay.effect.Pure;
+import okay.effect.Eff;
 /**
  * THE CAPABILITIES OF A ROW: the value at run time of the row type {@code R} (see {@link Eff}). A place is taken by
  * its position, as the handlers are nested: {@link #head} the nearest, {@link #tail} the rest. A program that needs
@@ -80,25 +82,25 @@ public final class Fx<R> {
     }
 
     /** Runs a program that performs nothing more: every place of its row handled. */
-    public static <A> A run(Effects effects, Program<Pure, A> program) {
+    public static <A> A run(Effects effects, Program<A, Pure> program) {
         return program.run(on(effects));
     }
 
     /** The program with its first place handled by a one-shot handler: a program of the rest of the row. */
-    public static <F, R, A, B> Program<R, B> handle(Handler<F, A, B, RuntimeException> handler,
-            Program<Eff<F, R>, A> program) {
+    public static <F, R, A, B> Program<B, R> handle(Handler<F, A, B, RuntimeException> handler,
+            Program<A, Eff<F, R>> program) {
         return outer -> outer.effects.handle(handler, (Effect<F> e) -> program.run(with(e, outer)));
     }
 
     /** The program with its first place handled in place (constant stack). */
-    public static <F, R, A, B> Program<R, B> handle(TailHandler<F, A, B> handler,
-            Program<Eff<F, R>, A> program) {
+    public static <F, R, A, B> Program<B, R> handle(TailHandler<F, A, B> handler,
+            Program<A, Eff<F, R>> program) {
         return outer -> outer.effects.handle(handler, (Effect<F> e) -> program.run(with(e, outer)));
     }
 
     /** The program with its first place handled with a state from {@code initial}. */
-    public static <F, S, R, A, B> Program<R, B> handle(StatefulHandler<F, S, A, B> handler, S initial,
-            Program<Eff<F, R>, A> program) {
+    public static <F, S, R, A, B> Program<B, R> handle(StatefulHandler<F, S, A, B> handler, S initial,
+            Program<A, Eff<F, R>> program) {
         return outer -> outer.effects.handle(handler, initial, (Effect<F> e) -> program.run(with(e, outer)));
     }
 
@@ -106,8 +108,8 @@ public final class Fx<R> {
      * The program with its first place handled by a multi-shot handler. Multi-shot is a type: the implementation is
      * given, and must be the row's own, else {@link IllegalStateException} when the program runs.
      */
-    public static <F, R, A, B> Program<R, B> handle(MultiEffects multi,
-            MultiHandler<F, A, B, RuntimeException> handler, Program<Eff<F, R>, A> program) {
+    public static <F, R, A, B> Program<B, R> handle(MultiEffects multi,
+            MultiHandler<F, A, B, RuntimeException> handler, Program<A, Eff<F, R>> program) {
         return outer -> {
             if (outer.effects != multi)
                 throw new IllegalStateException("a multi-shot handler on another implementation than the row's");
