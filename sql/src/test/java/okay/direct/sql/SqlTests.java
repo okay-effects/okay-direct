@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import okay.direct.Effect;
 import okay.direct.Effects;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,9 +45,9 @@ abstract class SqlTests {
     }
 
     /** A transfer: the program knows statements and failure, not connections nor commits. */
-    static Void transfer(Effect<Sql> sql, Effect<Fail<String>> fail, String from, String to, int amount) {
+    static Void transfer(Effect<Sql> sql, Effect<Throws<String>> fail, String from, String to, int amount) {
         Sql.update(sql, "update account set balance = balance - ? where id = ?", amount, from);
-        if (balance(sql, from) < 0) Fail.raise(fail, "not enough money on " + from);
+        if (balance(sql, from) < 0) Throws.raise(fail, "not enough money on " + from);
         Sql.update(sql, "update account set balance = balance + ? where id = ?", amount, to);
         return null;
     }
@@ -55,18 +55,18 @@ abstract class SqlTests {
     @Test
     void aTransactionCommitsWhenItsBodyReturns() {
         var fx = effects();
-        var outcome = Fail.attempt(fx, String.class, fail -> Transaction.run(fx, db,
+        var outcome = Throws.run(fx, String.class, fail -> Transaction.run(fx, db,
             sql -> transfer(sql, fail, "ann", "bob", 30)));
-        assertEquals(new Fail.Success<String, Void>(null), outcome);
+        assertEquals(new Throws.Ok<String, Void>(null), outcome);
         assertEquals(Map.of("ann", 70, "bob", 30), balances());
     }
 
     @Test
     void aFailFurtherOutRollsItBack() {
         var fx = effects();
-        var outcome = Fail.attempt(fx, String.class, fail -> Transaction.run(fx, db,
+        var outcome = Throws.run(fx, String.class, fail -> Transaction.run(fx, db,
             sql -> transfer(sql, fail, "ann", "bob", 130)));
-        assertEquals(new Fail.Failure<String, Void>("not enough money on ann"), outcome);
+        assertEquals(new Throws.Err<String, Void>("not enough money on ann"), outcome);
         assertEquals(Map.of("ann", 100, "bob", 0), balances()); // the debit, done before the failure, rolled back
     }
 
@@ -104,7 +104,7 @@ abstract class SqlTests {
     void aLoggedCapabilityTellsEachStatement() {
         var fx = effects();
         var log = new ArrayList<String>();
-        Fail.attempt(fx, String.class, fail -> Transaction.run(fx, db,
+        Throws.run(fx, String.class, fail -> Transaction.run(fx, db,
             sql -> transfer(Sql.logged(sql, log::add), fail, "ann", "bob", 10)));
         assertEquals(List.of(
             "update account set balance = balance - ? where id = ? [10, ann]",

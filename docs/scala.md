@@ -31,14 +31,14 @@ enum State[S]:
   case Get[S]() extends State[S], Op[State[S], S]
   case Put[S](value: S) extends State[S], Op[State[S], Unit]
 
-def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Fail[String]]): Int =
+def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Throws[String]]): Int =
   val base = Reader.ask[Int]
   State.put(State.get[Int] + 1)
   val result = if heads then base else -base
-  if result < 0 then Fail.raise(s"negative: $result") else result
+  if result < 0 then Throws.raise(s"negative: $result") else result
 
 given Effects = LoomEffects()
-Reader.run(42)(State.run(0)(Fail.attempt(program(true))))     // (1, Right(42))
+Reader.run(42)(State.run(0)(Throws.run(program(true))))     // (1, Right(42))
 ```
 
 A clause gets the operation as `E & Op[E, X]` and returns its answer; the match is exhaustive, and in each case
@@ -52,7 +52,7 @@ def answer[X](s: S, op: State[S] & Op[State[S], X]): (X, S) = op match
 
 The handler traits mirror the Java ones: `Handler` (`ret`, `on`; one-shot `k: X => B`), `MultiHandler` (multi-shot, on a
 `MultiEffects`), `InPlace` (`answer[X](op): X`), `StatefulHandler` (`answer[X](s, op): (X, S)`); `handle(h)(body)`,
-`handle(h, initial)(body)`. The standard effects: `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits` (a generator:
+`handle(h, initial)(body)`. The standard effects: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emits` (a generator:
 `Emits.emit(a)`, `Emits.collect(body)`).
 
 Two capabilities of one type — two `State[Int]` — are told apart by passing one explicitly, `(using outer)`. Scala 3
@@ -70,9 +70,9 @@ object State {
   final case class Put[S](value: S) extends State[S] with Op[State[S], Unit]
 }
 
-def program(heads: Boolean)(implicit r: Effect[Reader[Int]], s: Effect[State[Int]], f: Effect[Fail[String]]): Int = ...
+def program(heads: Boolean)(implicit r: Effect[Reader[Int]], s: Effect[State[Int]], f: Effect[Throws[String]]): Int = ...
 
-Reader.run(42) { implicit r => State.run(0) { implicit s => Fail.attempt[String, Int] { implicit f => program(true) } } }
+Reader.run(42) { implicit r => State.run(0) { implicit s => Throws.run[String, Int] { implicit f => program(true) } } }
 ```
 
 A clause answers through `k`, the operation the witness: `case get: Get[S] => k(get, state)`. Scala 2.13 does infer
@@ -90,13 +90,13 @@ enum Pay:
   case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
   case Balance() extends Pay, AuditedOp[Pay, Int]
 
-def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]) = new Interceptor[Pay, Audited[Pay]]:
+def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]) = new Interceptor[Pay, Audited[Pay]]:
   def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
-    case Pay.Transfer(to, amount) if amount > limit => Trail.record(s"refused: $amount"); Fail.raise("refused")
+    case Pay.Transfer(to, amount) if amount > limit => Trail.record(s"refused: $amount"); Throws.raise("refused")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim.toUpperCase, amount))
     case Pay.Balance() => pass(Pay.Balance())
 
-Trail.keep(Fail.attempt(bank(1000)(audit(guarded(1000))(payments))))
+Trail.keep(Throws.run(bank(1000)(audit(guarded(1000))(payments))))
 observe(telling)(Reader.run(5)(State.run(1)(program)))     // every operation, told
 ```
 
@@ -177,12 +177,12 @@ one (two implicits of one type by different names are ambiguous in Scala 2):
 With `okay-direct-sql` on the class path, `Transaction.run(db) { ... }` handles `Sql`, the capability in scope:
 
 ```scala
-def transfer(amount: Int)(using Effect[Sql], Effect[Fail[String]]): Unit =
+def transfer(amount: Int)(using Effect[Sql], Effect[Throws[String]]): Unit =
   Sql.update("update account set balance = balance - ? where id = ?", amount, "ann")
-  if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Fail.raise("too poor")
+  if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Throws.raise("too poor")
   Sql.update("update account set balance = balance + ? where id = ?", amount, "bob")
 
-Fail.attempt[String, Unit](Transaction.run(db)(transfer(130)))   // Left(too poor), the debit rolled back
+Throws.run[String, Unit](Transaction.run(db)(transfer(130)))   // Left(too poor), the debit rolled back
 transfer(30)(using Sql.logged(println))                          // each statement told; Sql.readOnly refuses changes
 ```
 
@@ -220,7 +220,7 @@ the handler's continuation has ended. Await it instead.
 
 Modules `scala-zio` (`okay.direct.scala3.ziointerop`) and `scala2-zio` (`okay.direct.scala2.ziointerop.Zio`); ZIO 2.1.
 Each of ZIO's channels is one of the effects, as in okay-simple: a `ZIO[R, E, A]` in a body has its environment asked of
-`Reader[ZEnvironment[R]]`, its typed error raised by `Fail[E]`, its run awaited (the effect `Zios`):
+`Reader[ZEnvironment[R]]`, its typed error raised by `Throws[E]`, its run awaited (the effect `Zios`):
 
 | | |
 |---|---|

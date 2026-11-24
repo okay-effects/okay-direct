@@ -10,10 +10,10 @@ import okay.direct.sql.{Sql as JSql, Transaction as JTransaction}
  * capability `Effect[Sql]` a context parameter, [[Transaction.run]] its handler — committed when the body returns,
  * rolled back when it fails or a handler further out drops its rest.
  * {{{
- * Fail.attempt[String, Unit]:
+ * Throws.run[String, Unit]:
  *   Transaction.run(db):
  *     Sql.update("update account set balance = balance - ? where id = ?", 50, "ann")
- *     if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Fail.raise("too poor")
+ *     if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Throws.raise("too poor")
  * }}}
  */
 type Sql = JSql

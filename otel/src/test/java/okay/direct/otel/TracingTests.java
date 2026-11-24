@@ -16,7 +16,7 @@ import okay.direct.Effect;
 import okay.direct.Effects;
 import okay.direct.Interceptor;
 import okay.direct.InPlace;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import okay.direct.std.State;
 import org.junit.jupiter.api.Test;
 
@@ -107,10 +107,10 @@ abstract class TracingTests {
     @Test
     void aDroppedRestEndsItsSpanAbandoned() {
         var fx = Tracing.traced(effects(), provider.get("test"));
-        var outcome = Fail.attempt(fx, String.class, fail -> Fail.raise(fail, "no"));
-        assertEquals(new Fail.Failure<String, Object>("no"), outcome);
+        var outcome = Throws.run(fx, String.class, fail -> Throws.raise(fail, "no"));
+        assertEquals(new Throws.Err<String, Object>("no"), outcome);
         var span = exported.getFinishedSpanItems().getFirst();
-        assertEquals("Fail.Raise", span.getName());
+        assertEquals("Throws.Raise", span.getName());
         assertEquals(true, span.getAttributes().get(AttributeKey.booleanKey("okay.abandoned")));
     }
 

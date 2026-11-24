@@ -8,7 +8,7 @@ import okay.effect.Op;
  * <li>tell: perform effects of its own, to a trail, a log, a metric;</li>
  * <li>pass the operation on, {@code pass.pass(op)}, to the capability it guards, and answer with what came back;</li>
  * <li>change the operation, passing on another one, or change the answer;</li>
- * <li>refuse: not pass it on, and throw, or fail through an effect of its own, {@code Fail.raise}.</li>
+ * <li>refuse: not pass it on, and throw, or fail through an effect of its own, {@code Throws.raise}.</li>
  * </ul>
  * It answers through {@code k}, exactly once, the operation the witness of the answer's type, unless it refuses.
  * For a plain effect {@code C} and {@code F} are the same; for a sensitive one {@code F} is {@code Audited<C>}.

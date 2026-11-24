@@ -40,21 +40,25 @@ object Reader {
     })(body)
 }
 
-/** Failure with an error of type E: the rest of the body dropped. */
-sealed trait Fail[E]
+/** THROWS: a failure with an error of type E; the rest of the body dropped, unwound, before it is answered. */
+sealed trait Throws[E]
 
-object Fail {
-  final case class Raise[E](error: E) extends Fail[E] with Op[Fail[E], Nothing]
+object Throws {
+  final case class Raise[E](error: E) extends Throws[E] with Op[Throws[E], Nothing]
 
-  def raise[E](error: E)(implicit fail: Effect[Fail[E]]): Nothing = fail.perform(Raise(error))
+  def raise[E](error: E)(implicit fail: Effect[Throws[E]]): Nothing = fail.perform(Raise(error))
 
-  def attempt[E, A](body: Effect[Fail[E]] => A)(implicit fx: Effects): Either[E, A] =
-    handle(new Handler[Fail[E], A, Either[E, A]] {
+  def run[E, A](body: Effect[Throws[E]] => A)(implicit fx: Effects): Either[E, A] =
+    handle(new Handler[Throws[E], A, Either[E, A]] {
       def ret(a: A): Either[E, A] = Right(a)
-      def on(op: Fail[E], k: Resume[Fail[E], Either[E, A]]): Either[E, A] = op match {
+      def on(op: Throws[E], k: Resume[Throws[E], Either[E, A]]): Either[E, A] = op match {
         case Raise(e) => Left(e)
       }
     })(body)
+
+  /** The body's value, or what `rescue` makes of its failure: the rest dropped, unwound, first. */
+  def recover[E, A](rescue: E => A)(body: Effect[Throws[E]] => A)(implicit fx: Effects): A =
+    run[E, A](body).fold(rescue, identity)
 }
 
 /** A choice of two ways: its handler resumes the rest twice, so it needs a `MultiEffects`. */

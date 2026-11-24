@@ -16,7 +16,7 @@ import okay.direct.Implicit;
 import okay.direct.Resume;
 import okay.direct.InPlace;
 import okay.direct.Answer;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
 import org.junit.jupiter.api.Test;
@@ -30,34 +30,34 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     public abstract Effects effects();
 
     /** Reads a base, counts in state, fails on a negative result: three effects, no monad. */
-    static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state, Effect<Fail<String>> fail,
+    static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state, Effect<Throws<String>> fail,
             boolean heads) {
         int base = Reader.ask(reader);
         State.put(state, State.get(state) + 1);
         int result = heads ? base : -base;
-        return result < 0 ? Fail.raise(fail, "negative: " + result) : result;
+        return result < 0 ? Throws.raise(fail, "negative: " + result) : result;
     }
 
     @Test
     void handlersNestInAnyOrder() {
         var fx = effects();
-        var heads = Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.<String, Integer, RuntimeException>attempt(fx,
-            fail -> program(reader, state, fail, true))));
-        assertEquals(new State.Final<>(1, new Fail.Success<String, Integer>(42)), heads);
+        var heads = Reader.run(fx, 42, reader -> State.run(fx, 0,
+            state -> Throws.<String, Integer, RuntimeException>run(fx, fail -> program(reader, state, fail, true))));
+        assertEquals(new State.Final<>(1, new Throws.Ok<String, Integer>(42)), heads);
 
-        var tails = Fail.<String, State.Final<Integer, Integer>, RuntimeException>attempt(fx, fail -> State.run(fx, 0,
+        var tails = Throws.<String, State.Final<Integer, Integer>, RuntimeException>run(fx, fail -> State.run(fx, 0,
             state -> Reader.run(fx, 42, reader -> program(reader, state, fail, false))));
-        assertEquals(new Fail.Failure<String, State.Final<Integer, Integer>>("negative: -42"), tails);
+        assertEquals(new Throws.Err<String, State.Final<Integer, Integer>>("negative: -42"), tails);
     }
 
     @Test
     void theErrorsTypeGivenAsAClassTypesTheBodyWithNoTypedLambda() {
         var fx = effects();
         var ok = Reader.run(fx, 42, reader -> State.run(fx, 0, state ->
-            Fail.attempt(fx, String.class, fail -> program(reader, state, fail, true))));
-        assertEquals(new State.Final<>(1, new Fail.Success<String, Integer>(42)), ok);
-        Fail.Outcome<String, Integer> no = Fail.attempt(fx, String.class, fail -> Fail.raise(fail, "no"));
-        assertEquals(new Fail.Failure<String, Integer>("no"), no);
+            Throws.run(fx, String.class, fail -> program(reader, state, fail, true))));
+        assertEquals(new State.Final<>(1, new Throws.Ok<String, Integer>(42)), ok);
+        Throws.Result<String, Integer> no = Throws.run(fx, String.class, fail -> Throws.raise(fail, "no"));
+        assertEquals(new Throws.Err<String, Integer>("no"), no);
     }
 
     @Test
@@ -80,21 +80,22 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     @Test
     void aClauseRunsOutsideTheBodyAndPerformsOuterEffects() {
         var fx = effects();
-        // a handler of Fail that counts each failure in an outer state, and resumes nothing
-        var result = State.run(fx, 0, state -> fx.handle(new Handler<Fail<String>, String, String, RuntimeException>() {
+        // a handler of Throws that counts each failure in an outer state, and resumes nothing
+        var result = State.run(fx, 0,
+            state -> fx.handle(new Handler<Throws<String>, String, String, RuntimeException>() {
             @Override
             public String ret(String value) {
                 return value;
             }
 
             @Override
-            public String on(Fail<String> op, Resume<Fail<String>, String, RuntimeException> k) {
+            public String on(Throws<String> op, Resume<Throws<String>, String, RuntimeException> k) {
                 State.put(state, State.get(state) + 1);
                 return switch (op) {
-                    case Fail.Raise<String, ?> raise -> "recovered from " + raise.error();
+                    case Throws.Raise<String, ?> raise -> "recovered from " + raise.error();
                 };
             }
-        }, fail -> Fail.<String, String>raise(fail, "boom")));
+        }, fail -> Throws.<String, String>raise(fail, "boom")));
         assertEquals(new State.Final<>(1, "recovered from boom"), result);
     }
 
@@ -120,16 +121,16 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     void anAbandonedRestUnwindsAndRunsItsFinallyBlocks() {
         var fx = effects();
         var cleaned = new AtomicBoolean();
-        var result = State.run(fx, 0, state -> Fail.<String, Integer, RuntimeException>attempt(fx, fail -> {
+        var result = State.run(fx, 0, state -> Throws.<String, Integer, RuntimeException>run(fx, fail -> {
             try {
-                return Fail.<String, Integer>raise(fail, "boom");
+                return Throws.<String, Integer>raise(fail, "boom");
             } finally {
                 cleaned.set(true);
                 State.put(state, 7); // an outer effect, still handled while unwinding
             }
         }));
         assertTrue(cleaned.get());
-        assertEquals(new State.Final<>(7, new Fail.Failure<String, Integer>("boom")), result);
+        assertEquals(new State.Final<>(7, new Throws.Err<String, Integer>("boom")), result);
     }
 
     @Test

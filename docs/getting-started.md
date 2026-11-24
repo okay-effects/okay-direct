@@ -122,8 +122,8 @@ sbt: `fork := true` and `javaOptions ++= Seq(...)` with the same three. Your cod
 ## A first program: Java
 
 A shop's cart: an effect of our own, prices; a program totalling the cart; two handlers that give prices their
-meaning — an external, asynchronous price service, and a sale on top of it; and the `Fail` of the standard effects for
-an item with no price. It is checked against the release 0.1.0, run on a virtual thread: eight quotes, 100 ms each, in
+meaning — an external, asynchronous price service, and a sale on top of it; and the `Throws` of the standard effects
+for an item with no price. It is checked against the release 0.1.0, run on a virtual thread: eight quotes, 100 ms each, in
 about 0.85 s.
 
 **The effect and the program.** An effect is a sealed interface, its operations records implementing it and
@@ -136,10 +136,10 @@ sealed interface Prices {
 }
 
 // the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
-static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
+static int total(Effect<Prices> prices, Effect<Throws<String>> fail, List<String> cart) {
     return cart.stream()
         .mapToInt(item -> prices.perform(new Prices.Price(item))
-            .orElseGet(() -> Fail.raise(fail, "no price for " + item)))
+            .orElseGet(() -> Throws.raise(fail, "no price for " + item)))
         .sum();
 }
 ```
@@ -196,34 +196,34 @@ var table = Map.of("tea", 30, "cake", 50, "jam", 20);
 PriceService service = item -> CompletableFuture.supplyAsync(() -> Optional.ofNullable(table.get(item)),
     CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
 
-Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
-// Success[value=100]
+Throws.run(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+// Ok[value=100]
 
-Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
-// Failure[error=no price for coffee] — and cake is never priced
+Throws.run(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+// Err[error=no price for coffee] — and cake is never priced
 
-Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
+Trail.keep(fx, trail -> Throws.run(fx, String.class, fail ->
     pricesFrom(fx, service, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
-// Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
+// Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Ok[value=90]]
 ```
 
 What is unusual here:
 
 - **An effect inside a stream's lambda.** In monadic style `mapToInt` cannot wait for a monad: it would be rewritten
   with `traverse` and `flatMap`. Here the stack from `perform` up to its handler is suspended, whatever is between.
-- **An early exit from the middle of a stream.** At `coffee`, `Fail`'s handler does not resume the rest: it unwinds,
-  the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Failure`.
+- **An early exit from the middle of a stream.** At `coffee`, `Throws`'s handler does not resume the rest: it unwinds,
+  the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Err`.
 - **Asynchrony without async code.** The service answers on another thread, later; `total` does not know it: its
   handler waits for the future, and on a virtual thread a wait holds no OS thread. No `thenCompose`, no callback.
 - **The meaning changes, the program does not.** `total` is the same; the prices come from the service, from a sale on
   top of it with a trail, from a database, from a test — whichever handler is installed.
-- **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
+- **The signature lists the effects.** `total(Effect<Prices>, Effect<Throws<String>>, ...)` says what it may do; without
   a handler of prices there is no capability to call it with: it does not compile.
 
 The imports: `java.util.Optional`, `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.effect.Op`, `okay.direct.{Answer, Body, Effect,
 Effects, Interceptor, InPlace}`,
-`okay.direct.loom.LoomEffects`, `okay.direct.std.{Fail, Trail}`. A handler that resumes the rest, or does not, or wraps
-what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).
+`okay.direct.loom.LoomEffects`, `okay.direct.std.{Throws, Trail}`. A handler that resumes the rest, or does not, or
+wraps what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).
 
 ## A first program: Scala
 
@@ -234,14 +234,14 @@ import okay.direct.{Effect, Effects}
 import okay.direct.loom.LoomEffects
 import okay.direct.scala3.*
 
-def program(using Effect[Reader[Int]], Effect[State[Int]], Effect[Fail[String]]): Int =
+def program(using Effect[Reader[Int]], Effect[State[Int]], Effect[Throws[String]]): Int =
   val base = Reader.ask[Int]
   State.put(State.get[Int] + 1)
-  if base < 0 then Fail.raise(s"negative: $base") else base * 2
+  if base < 0 then Throws.raise(s"negative: $base") else base * 2
 
 @main def hello(): Unit =
   given Effects = LoomEffects()
-  println(Reader.run(21)(State.run(0)(Fail.attempt(program))))     // (1,Right(42))
+  println(Reader.run(21)(State.run(0)(Throws.run(program))))     // (1,Right(42))
 ```
 
 With scala-cli, the whole of it in one file:
@@ -257,7 +257,7 @@ With scala-cli, the whole of it in one file:
 ```
 
 Scala 2.13: the same with implicits —
-`Reader.run(21) { implicit r => State.run(0) { implicit s => Fail.attempt[String, Int] { implicit f => program } } }`
+`Reader.run(21) { implicit r => State.run(0) { implicit s => Throws.run[String, Int] { implicit f => program } } }`
 ([Scala](scala.md#scala-213)).
 
 ## Running on Espresso: multi-shot

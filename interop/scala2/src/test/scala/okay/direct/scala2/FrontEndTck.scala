@@ -8,11 +8,12 @@ import org.junit.jupiter.api.Test
 
 object Programs {
   /** Reads a base, counts in state, fails on a negative result: the capabilities implicit. */
-  def program(heads: Boolean)(implicit r: Effect[Reader[Int]], s: Effect[State[Int]], f: Effect[Fail[String]]): Int = {
+  def program(heads: Boolean)
+      (implicit r: Effect[Reader[Int]], s: Effect[State[Int]], f: Effect[Throws[String]]): Int = {
     val base = Reader.ask[Int]
     State.put(State.get[Int] + 1)
     val result = if (heads) base else -base
-    if (result < 0) Fail.raise(s"negative: $result") else result
+    if (result < 0) Throws.raise(s"negative: $result") else result
   }
 
   def add(x: Int)(implicit s: Effect[State[Int]]): Unit = State.put(State.get[Int] + x)
@@ -26,10 +27,16 @@ abstract class FrontEndTck {
 
   @Test def handlersNestInAnyOrder(): Unit = {
     assertEquals((1, Right(42)), Reader.run(42) { implicit r =>
-      State.run(0) { implicit s => Fail.attempt[String, Int] { implicit f => program(heads = true) } }
+      State.run(0) { implicit s => Throws.run[String, Int] { implicit f => program(heads = true) } }
     })
-    assertEquals(Left("negative: -42"), Fail.attempt[String, (Int, Int)] { implicit f =>
+    assertEquals(Left("negative: -42"), Throws.run[String, (Int, Int)] { implicit f =>
       State.run(0) { implicit s => Reader.run(42) { implicit r => program(heads = false) } }
+    })
+  }
+
+  @Test def aFailureIsRecoveredFrom(): Unit = {
+    assertEquals(-1, Throws.recover[String, Int](_ => -1) { implicit f =>
+      Reader.run(42) { implicit r => State.run(0) { implicit s => program(heads = false) } }._2
     })
   }
 
@@ -44,8 +51,8 @@ abstract class FrontEndTck {
   @Test def anAbandonedRestRunsItsFinallyBlocks(): Unit = {
     var cleaned = false
     val result = State.run(0) { implicit s =>
-      Fail.attempt[String, Int] { implicit f =>
-        try Fail.raise("boom")
+      Throws.run[String, Int] { implicit f =>
+        try Throws.raise("boom")
         finally {
           cleaned = true
           State.put(7)

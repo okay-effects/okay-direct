@@ -23,7 +23,7 @@ def bank[A](balance: Int)(body: Audit.Vault[Pay] ?=> A)(using Effects): A =
 def masked(account: String): String = "****" + account.takeRight(4)
 
 /** The audit of payments: normalized, told masked, refused over the limit. */
-def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]): Interceptor[Pay, Audited[Pay]] =
+def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]): Interceptor[Pay, Audited[Pay]] =
   new Interceptor[Pay, Audited[Pay]]:
     def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
       case Pay.Transfer(to0, amount) =>
@@ -31,7 +31,7 @@ def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]): Interceptor[
         if amount > limit then
           val why = s"refused: $amount to ${masked(to)} over the limit $limit"
           Trail.record(why)
-          Fail.raise(why)
+          Throws.raise(why)
         else
           val receipt = pass(Pay.Transfer(to, amount))
           Trail.record(s"transfer $amount to ${masked(to)} → $receipt")
@@ -68,7 +68,7 @@ abstract class ControlTck:
     assertEquals((List("put 5"), (10, 10)), result)
 
   @Test def theAuditOfASensitiveEffectNormalizesTellsAndRefuses(): Unit =
-    val result = Trail.keep(Fail.attempt[String, Int](bank(1000)(audit(guarded(1000))(payments))))
+    val result = Trail.keep(Throws.run[String, Int](bank(1000)(audit(guarded(1000))(payments))))
     assertEquals((List(
       "transfer 100 to ****1234 → ok:ACCT-1234:100",
       "balance → 900",

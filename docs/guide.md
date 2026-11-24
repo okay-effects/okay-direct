@@ -54,13 +54,13 @@ static <S> void put(Effect<State<S>> state, S value) { state.perform(new State.P
 ordinary methods — in lambdas, across functions, in streams:
 
 ```java
-static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state, Effect<Fail<String>> fail) {
+static int program(Effect<Reader<Integer>> reader, Effect<State<Integer>> state, Effect<Throws<String>> fail) {
     int base = Reader.ask(reader);
     State.put(state, State.get(state) + 1);
-    return base < 0 ? Fail.raise(fail, "negative") : base;
+    return base < 0 ? Throws.raise(fail, "negative") : base;
 }
 
-Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Fail.attempt(fx, String.class, fail -> program(reader, state, fail))));
+Reader.run(fx, 42, reader -> State.run(fx, 0, state -> Throws.run(fx, String.class, fail -> program(reader, state, fail))));
 ```
 
 A missing handler does not compile: there is no capability to pass. Two handlers of one effect — two counters, both
@@ -108,11 +108,11 @@ fx.handle(new StatefulHandler<State<S>, S, A, Final<S, A>>() {
 handler returns for it; the clause may wrap it, or not resume at all:
 
 ```java
-fx.handle(new Handler<Fail<E>, A, Outcome<E, A>, T>() {
-    public Outcome<E, A> ret(A value) { return new Success<>(value); }
-    public Outcome<E, A> on(Fail<E> op, Resume<Fail<E>, Outcome<E, A>, T> k) {
+fx.handle(new Handler<Throws<E>, A, Result<E, A>, T>() {
+    public Result<E, A> ret(A value) { return new Ok<>(value); }
+    public Result<E, A> on(Throws<E> op, Resume<Throws<E>, Result<E, A>, T> k) {
         return switch (op) {
-            case Raise<E, ?> raise -> new Failure<>(raise.error());     // k not resumed: the rest dropped
+            case Raise<E, ?> raise -> new Err<>(raise.error());     // k not resumed: the rest dropped
         };
     }
 }, body);
@@ -189,11 +189,11 @@ Fx.run(fx, Reader.run(10, State.run(0, Shop::step)));      // Final[state=10, va
 ```
 
 - `Program<A, R>` is a program of the row `R`; `Fx.handle(handler, p)` and the standard forms (`State.run(0, p)`,
-  `Reader.run(env, p)`, `Fail.attempt(p)`, `Choose.collect(multi, p)`) handle its first place; `Fx.run` runs a
+  `Reader.run(env, p)`, `Throws.run(p)`, `Choose.collect(multi, p)`) handle its first place; `Fx.run` runs a
   program of `Pure`. Handlers in another order than the row, or a place left unhandled, do not compile.
 - Open rows (`? extends` at every step) fit into longer rows; `Fx.tail(fx)` gives the rest to a program of it.
-- A program of a row throws no checked exception: `Fail.catching(fail, IOException.class, () -> ...)` turns one into
-  the row's failure, `Fail.rethrow(fx, p)` throws it back at the end.
+- A program of a row throws no checked exception: `Throws.catching(fail, IOException.class, () -> ...)` turns one into
+  the row's failure, `Throws.rethrow(fx, p)` throws it back at the end.
 - Body-style handlers serve rows through `Fx.with(capability, rest)`.
 
 ## The standard effects
@@ -204,7 +204,7 @@ Fx.run(fx, Reader.run(10, State.run(0, Shop::step)));      // Final[state=10, va
 |---|---|---|
 | `State<S>` | `get`, `put` | `State.run(fx, initial, body)`: the final state and the value, `State.Final` |
 | `Reader<E>` | `ask` | `Reader.run(fx, env, body)` |
-| `Fail<E>` | `raise` (answered by any type: never resumed) | `Fail.attempt(fx, String.class, body)`: `Fail.Success` or `Fail.Failure`; the error's class lets Java type the body's lambda |
+| `Throws<E>` | `raise` (answered by any type: never resumed) | `Throws.run(fx, String.class, body)`: `Throws.Ok` or `Throws.Err`, or `Throws.recover(fx, String.class, error -> a, body)`; the error's class lets Java type the body's lambda |
 | `Choose` | `flip` | `Choose.all(multiFx, body)`: every way, multi-shot |
 | `Trail` | `record(line)` | `Trail.keep(fx, body)`: the lines and the value, `Trail.Kept` |
 | `Emits<A>` | `emit(value)` | `Emits.collect(fx, body)`: a list; `Emits.stream(fx, body)`: a lazy `Stream` |
@@ -272,7 +272,8 @@ sealed interface Pay {
 ```java
 Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
     switch (op) {
-        case Pay.Transfer t when t.amount() > limit -> { Trail.record(trail, "refused"); Fail.raise(fail, "refused"); }
+        case Pay.Transfer t when t.amount() > limit -> { Trail.record(trail, "refused");
+            Throws.raise(fail, "refused"); }
         case Pay.Transfer t -> {
             var receipt = pass.pass(new Pay.Transfer(t.to().trim().toUpperCase(), t.amount()));
             Trail.record(trail, "transfer " + t.amount() + " → " + receipt);
@@ -282,7 +283,7 @@ Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
     }
 };
 
-Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
+Trail.keep(fx, trail -> Throws.run(fx, String.class, fail ->
     Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded, pay -> payments(pay)))));
 ```
 
@@ -510,12 +511,12 @@ Stream<List<Integer>> triples = Reflection.stream(espresso, (Prompt<Stream<List<
 ```
 
 The pairs of three monads are in `Reflection` already, typed, so that their types are inferred: `optional` and `get` for
-`Optional`, `outcome` and `get` for an either (`Fail.Outcome`), `written`, `get` and `tell` for a writer
+`Optional`, `result` and `get` for an either (`Throws.Result`), `written`, `get` and `tell` for a writer
 (`Reflection.Written`, a value and a log):
 
 ```java
-Outcome<String, Integer> sum = Reflection.outcome(fx, p -> get(p, parse("40")) + get(p, parse("2")));
-                                       // Success[value=42]; with "4o": Failure[error=not a number: 4o]
+Result<String, Integer> sum = Reflection.result(fx, p -> get(p, parse("40")) + get(p, parse("2")));
+                                       // Ok[value=42]; with "4o": Err[error=not a number: 4o]
 Written<String, Integer> w = Reflection.written(fx, p -> {
     tell(p, "start");
     int total = 0;
@@ -539,14 +540,14 @@ when the body returns, and rolls back when it fails — or when a handler furthe
 through the transaction. The program knows statements and failure, not connections nor commits:
 
 ```java
-static Void transfer(Effect<Sql> sql, Effect<Fail<String>> fail, String from, String to, int amount) {
+static Void transfer(Effect<Sql> sql, Effect<Throws<String>> fail, String from, String to, int amount) {
     Sql.update(sql, "update account set balance = balance - ? where id = ?", amount, from);
-    if (balance(sql, from) < 0) Fail.raise(fail, "not enough money on " + from);       // rolled back
+    if (balance(sql, from) < 0) Throws.raise(fail, "not enough money on " + from);       // rolled back
     Sql.update(sql, "update account set balance = balance + ? where id = ?", amount, to);
     return null;
 }
 
-Outcome<String, Void> done = Fail.attempt(fx, String.class, fail -> Transaction.run(fx, db,
+Result<String, Void> done = Throws.run(fx, String.class, fail -> Transaction.run(fx, db,
     sql -> transfer(sql, fail, "ann", "bob", 30)));
 ```
 

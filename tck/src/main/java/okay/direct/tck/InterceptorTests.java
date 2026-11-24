@@ -15,7 +15,7 @@ import okay.direct.Effects;
 import okay.direct.Interceptor;
 import okay.direct.Observer;
 import okay.direct.InPlace;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
 import okay.direct.std.Trail;
@@ -38,7 +38,7 @@ interface InterceptorTests {
     }
 
     /** The audit of payments: the account normalized, a limit, the trail masked, a refusal raised. */
-    static Interceptor<Pay, Audited<Pay>> guarded(int limit, Effect<Trail> trail, Effect<Fail<String>> fail) {
+    static Interceptor<Pay, Audited<Pay>> guarded(int limit, Effect<Trail> trail, Effect<Throws<String>> fail) {
         return (op, pass, k) -> {
             switch (op) {
                 case Pay.Transfer transfer -> {
@@ -46,7 +46,7 @@ interface InterceptorTests {
                     if (transfer.amount() > limit) {
                         var why = "refused: " + transfer.amount() + " to " + masked(to) + " over the limit " + limit;
                         Trail.record(trail, why);
-                        Fail.<String, Void>raise(fail, why);
+                        Throws.<String, Void>raise(fail, why);
                     } else {
                         var receipt = pass.pass(new Pay.Transfer(to, transfer.amount()));
                         Trail.record(trail, "transfer " + transfer.amount() + " to " + masked(to) + " → " + receipt);
@@ -93,13 +93,13 @@ interface InterceptorTests {
     @Test
     default void theAuditOfASensitiveEffectNormalizesTellsAndRefuses() {
         var fx = effects();
-        var result = Trail.keep(fx, trail -> Fail.<String, Integer, RuntimeException>attempt(fx,
+        var result = Trail.keep(fx, trail -> Throws.<String, Integer, RuntimeException>run(fx,
             fail -> Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded(1000, trail, fail), InterceptorTests::payments))));
         assertEquals(new Trail.Kept<>(List.of(
             "transfer 100 to ****1234 → ok:ACCT-1234:100",
             "balance → 900",
             "refused: 5000 to ****T-77 over the limit 1000"),
-            new Fail.Failure<String, Integer>("refused: 5000 to ****T-77 over the limit 1000")), result);
+            new Throws.Err<String, Integer>("refused: 5000 to ****T-77 over the limit 1000")), result);
     }
 
     @Test
@@ -187,16 +187,16 @@ interface InterceptorTests {
     default void anAbandonedRestUnwindsThroughInnerHandlers() {
         var fx = effects();
         var cleaned = new AtomicBoolean();
-        var result = Fail.<String, State.Final<Integer, Integer>, RuntimeException>attempt(fx, fail -> State.run(fx, 0, state -> {
+        var result = Throws.<String, State.Final<Integer, Integer>, RuntimeException>run(fx, fail -> State.run(fx, 0, state -> {
             try {
                 State.put(state, 1);
-                return Fail.<String, Integer>raise(fail, "boom");
+                return Throws.<String, Integer>raise(fail, "boom");
             } finally {
                 cleaned.set(true);
             }
         }));
         assertTrue(cleaned.get());
-        assertEquals(new Fail.Failure<String, State.Final<Integer, Integer>>("boom"), result);
+        assertEquals(new Throws.Err<String, State.Final<Integer, Integer>>("boom"), result);
     }
 
     @Test

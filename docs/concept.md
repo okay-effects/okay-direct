@@ -51,12 +51,12 @@ log, an audit are different handlers of the same program.
 | **Types** | the row: what a program may ask, as a nested list in its type | `okay.effect.Eff<E, R>`, `Pure` (okay-java-api) |
 | **Direct style** | the program is ordinary code; `perform` a call that returns the answer | `Program<A, R>`, `Fx<R>` |
 | **Parameters** | one place of the row given to code that needs only it | `Effect<F>` = `Fx.head(fx)` |
-| **Exceptions** | an error is an effect with a place in the row; Java's checked exceptions meet it at the ends | `Fail<E>`, `Fail.catching`, `Fail.rethrow` |
+| **Exceptions** | an error is an effect with a place in the row; Java's checked exceptions meet it at the ends | `Throws<E>`, `Throws.catching`, `Throws.rethrow` |
 | **Data** | the program as a value of operations and binds: inspected, sent, stored, resumed many times without frames | okay-effects' `Comp<A, R>` (same `Eff` row); `Reflection` |
 
 They are not alternatives to choose between: one program uses them all. A method that needs several effects takes the
 row (`Fx<...>`); a helper that needs one takes its capability (`Effect<Log>`); a call into a library that throws
-`IOException` is wrapped by `Fail.catching` into the row's failure; at the entry point `Fail.rethrow` gives the
+`IOException` is wrapped by `Throws.catching` into the row's failure; at the entry point `Throws.rethrow` gives the
 failure back to Java's `throws`; the same operations, under the same row, can be written as data where a program has
 to be stored or inspected. Code written in the body style (`Body<F, A, E>`, one capability) and code of rows call each
 other through `Fx.with`.
@@ -75,9 +75,9 @@ static int step(Fx<? extends Eff<State<Integer>, ? extends Eff<Reader<Integer>, 
 State.Final<Integer, Integer> r = Fx.run(new LoomEffects(), Reader.run(10, State.run(0, Shop::step)));
 
 // errors: a checked exception into the row, and out of it at the end
-Program<String, Eff<Fail<IOException>, Pure>> read =
-        fx -> Fail.catching(Fx.head(fx), IOException.class, () -> Files.readString(path));
-String text = Fail.rethrow(effects, read);           // throws IOException
+Program<String, Eff<Throws<IOException>, Pure>> read =
+        fx -> Throws.catching(Fx.head(fx), IOException.class, () -> Files.readString(path));
+String text = Throws.rethrow(effects, read);           // throws IOException
 ```
 
 ## 4. Rows in Java: the rules
@@ -91,11 +91,11 @@ okay-effects' Java kernel:
   so typed is a program of every row that starts with these places. Closed rows (`Eff<A, Eff<B, Pure>>`) are for
   programs that say exactly what they do.
 - **A handler takes the first place**: `Fx.handle(handler, program)` and the standard forms (`State.run(0, p)`,
-  `Reader.run(env, p)`, `Fail.attempt(p)`, `Choose.collect(multi, p)`) turn a `Program<A, Eff<F, R>>` into a
+  `Reader.run(env, p)`, `Throws.run(p)`, `Choose.collect(multi, p)`) turn a `Program<A, Eff<F, R>>` into a
   `Program<B, R>`; `Fx.run` runs a `Program<A, Pure>`. A place left unhandled does not compile.
 - **A named row** (`interface Shop extends Eff<Prices, Eff<Log, Pure>> {}`) can be read (`head`, `second`) but not
   taken apart by handlers; `Fx.fit` widens a row's type.
-- **A program throws no checked exception.** An error is `Fail<E>` in the row. (A type parameter for the exception was
+- **A program throws no checked exception.** An error is `Throws<E>` in the row. (A type parameter for the exception was
   tried: Java infers it as `Exception` as soon as two handlers are nested, so every caller would catch `Exception`.)
 - **A body-style handler serves a row** through `Fx.with(capability, rest)`; that is how every standard form is
   written, in one line.
@@ -111,7 +111,7 @@ unhandled.
 2. **Write the program against its row** in direct style. A function that needs one effect takes its `Effect<F>`;
    one that needs several takes the row. No ambient effects: time, randomness, IO, environment are effects.
 3. **Write the handlers**: the production one over the host's client; the test one over a `Map` or a `State`; a
-   recording one where a run must be reproducible. Errors and aborts are `Fail`, not exceptions thrown through.
+   recording one where a run must be reproducible. Errors and aborts are `Throws`, not exceptions thrown through.
 4. **Choose the order** of handlers: it is meaning, and it is in the row's type.
 5. **Run in one line** at the entry point. Inside a program, install a handler around a sub-program and keep it a
    program; never run a sub-program to pull a value out.
@@ -137,10 +137,10 @@ What is NOT done, on purpose: a monad-only API (Java programmers would not read 
 ## 7. Where it stands, and what is next
 
 - Done (okay-direct 0.1.1-SNAPSHOT): the row (`Fx`, `Program<A, R>`) over the existing API, on every implementation;
-  row forms of `State`, `Reader`, `Fail`, `Choose`; `Fail.catching`/`Fail.rethrow`; TCK and compile-time refusals.
+  row forms of `State`, `Reader`, `Throws`, `Choose`; `Throws.catching`/`Throws.rethrow`; TCK and compile-time refusals.
   The vocabulary is okay-java-api's (`okay.effect.Op<E, X, Self>`, `Eff`, `Pure`), shared with okay-java; the Scala
   front ends write `Op[F, X]` (an alias, the effect as `Self`).
-- Next, to the family's names (CONCEPT.md §6): `Throws` for `Fail`, `Emit` for `Emits`, `Clock` for `VirtualClock`,
+- Next, to the family's names (CONCEPT.md §6): `Throws` for `Throws`, `Emit` for `Emits`, `Clock` for `VirtualClock`,
   `ret`/`on`/`answer` for `value`/`operation`, `observe` for `Observer.watch`, `Sensitive` on the effect for
   `Audited.Op` on the operation; a handler's result `B`, never `R`. Then one SPI for direct style with okay-java's
   resumable transform as an implementation, and `reify`/`reflect` between `Program<A, R>` and okay-java's

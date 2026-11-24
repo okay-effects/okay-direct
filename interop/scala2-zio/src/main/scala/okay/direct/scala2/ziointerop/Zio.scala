@@ -2,7 +2,7 @@ package okay.direct.scala2.ziointerop
 
 import zio.{Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.{Effect, Effects}
-import okay.direct.scala2.{Op, Answer, Emits, Fail, Reader, InPlace, handle}
+import okay.direct.scala2.{Op, Answer, Emits, Throws, Reader, InPlace, handle}
 
 /** ZIOs awaited in a direct-style body. */
 sealed trait Zios
@@ -13,16 +13,16 @@ object Zios {
 
 /**
  * ZIO AND THE DIRECT STYLE, Scala 2, each of ZIO's channels one of the effects: a `ZIO[R, E, A]` in a body has its
- * environment asked of `Reader[ZEnvironment[R]]`, its typed error raised by `Fail[E]`, its run awaited. A body is a
+ * environment asked of `Reader[ZEnvironment[R]]`, its typed error raised by `Throws[E]`, its run awaited. A body is a
  * `ZIO[R, E, A]` by `toZIO`: its reader the ZIO's environment, its raise the ZIO's failure, a throw a defect.
  */
 object Zio {
   /** A ZIO in the body: its environment asked, its typed error raised, its run awaited. */
-  def fromZIO[R, E, A](z: ZIO[R, E, A])(implicit env: Effect[Reader[ZEnvironment[R]]], fail: Effect[Fail[E]], zios: Effect[Zios]): A = {
+  def fromZIO[R, E, A](z: ZIO[R, E, A])(implicit env: Effect[Reader[ZEnvironment[R]]], fail: Effect[Throws[E]], zios: Effect[Zios]): A = {
     val environment = Reader.ask[ZEnvironment[R]]
     zios.perform(Zios.Run(z.provideEnvironment(environment).either)) match {
       case Right(a) => a
-      case Left(e) => Fail.raise(e)
+      case Left(e) => Throws.raise(e)
     }
   }
 
@@ -44,12 +44,12 @@ object Zio {
   /** The body run here, its ZIOs on `runtime`. */
   def runAwaiting[A](body: Effect[Zios] => A)(implicit fx: Effects, runtime: Runtime[Any]): A = running(runtime)(body)
 
-  /** The body as a ZIO: its environment the ZIO's, its Fail the ZIO's error, a throw a defect. */
-  def toZIO[R, E, A](body: (Effect[Reader[ZEnvironment[R]]], Effect[Fail[E]], Effect[Zios]) => A)(implicit fx: Effects): ZIO[R, E, A] =
+  /** The body as a ZIO: its environment the ZIO's, its Throws the ZIO's error, a throw a defect. */
+  def toZIO[R, E, A](body: (Effect[Reader[ZEnvironment[R]]], Effect[Throws[E]], Effect[Zios]) => A)(implicit fx: Effects): ZIO[R, E, A] =
     ZIO.environmentWithZIO[R] { environment =>
       ZIO.runtime[Any].flatMap { runtime =>
         ZIO.attemptBlockingInterrupt(Reader.run(environment) { r =>
-          Fail.attempt[E, A] { f => running(runtime)(z => body(r, f, z)) }
+          Throws.run[E, A] { f => running(runtime)(z => body(r, f, z)) }
         }).orDie.flatMap(ZIO.fromEither(_))
       }
     }

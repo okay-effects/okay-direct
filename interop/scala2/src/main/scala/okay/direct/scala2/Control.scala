@@ -5,7 +5,7 @@ import okay.direct.{Audit, Audited, Effect, Effects, Observer}
 /**
  * CONTROL AND AUDIT, the Scala 2 way: an interceptor's clause matches the operation and answers through `k`, the
  * operation the witness of its answer's type, as in Java. It may tell, pass the operation on (`pass(op)`), change
- * it or its answer, or refuse — throw, or `Fail.raise`, not answering.
+ * it or its answer, or refuse — throw, or `Throws.raise`, not answering.
  */
 trait Interceptor[C, F] {
   def on(op: C, pass: Pass[F], k: Answer[F]): Unit

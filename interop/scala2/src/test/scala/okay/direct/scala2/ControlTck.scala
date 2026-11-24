@@ -28,7 +28,7 @@ object Pay {
   def masked(account: String): String = "****" + account.takeRight(4)
 
   /** The audit of payments: normalized, told masked, refused over the limit. */
-  def guarded(limit: Int)(implicit trail: Effect[Trail], fail: Effect[Fail[String]]): Interceptor[Pay, Audited[Pay]] =
+  def guarded(limit: Int)(implicit trail: Effect[Trail], fail: Effect[Throws[String]]): Interceptor[Pay, Audited[Pay]] =
     new Interceptor[Pay, Audited[Pay]] {
       def on(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
         case t: Transfer =>
@@ -36,7 +36,7 @@ object Pay {
           if (t.amount > limit) {
             val why = s"refused: ${t.amount} to ${masked(to)} over the limit $limit"
             Trail.record(why)
-            Fail.raise(why)
+            Throws.raise(why)
           } else {
             val receipt = pass(Transfer(to, t.amount))
             Trail.record(s"transfer ${t.amount} to ${masked(to)} → $receipt")
@@ -91,7 +91,7 @@ abstract class ControlTck {
   @Test def theAuditOfASensitiveEffectNormalizesTellsAndRefuses(): Unit = {
     implicit val fx: Effects = effects
     val result = Trail.keep { implicit trail =>
-      Fail.attempt[String, Int] { implicit fail =>
+      Throws.run[String, Int] { implicit fail =>
         bank(1000) { implicit vault => audit(guarded(1000))(payments) }
       }
     }

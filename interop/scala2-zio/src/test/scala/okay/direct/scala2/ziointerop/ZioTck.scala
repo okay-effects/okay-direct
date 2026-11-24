@@ -4,7 +4,7 @@ import zio.{Exit, Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.Effects
 import okay.direct.loom.LoomEffects
 import okay.direct.threads.ThreadEffects
-import okay.direct.scala2.{Emits, Fail, Reader, State}
+import okay.direct.scala2.{Emits, Throws, Reader, State}
 import zio.stream.ZStream
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.Test
@@ -43,7 +43,7 @@ trait ZioMore { this: ZioTck =>
     val log = List.newBuilder[String]
     def acquire(name: String) = ZIO.acquireRelease(ZIO.succeed { log += s"open $name"; name })(n => ZIO.succeed(log += s"close $n"))
     val ok = runAwaiting { implicit z => State.run(0) { implicit s => scoped(acquire("a")) { name => State.put(1); name.length } } }
-    val failed = runAwaiting { implicit z => Fail.attempt[String, Int] { implicit f => scoped(acquire("b"))(_ => Fail.raise("refused")) } }
+    val failed = runAwaiting { implicit z => Throws.run[String, Int] { implicit f => scoped(acquire("b"))(_ => Throws.raise("refused")) } }
     assertEquals((1, 1), ok)
     assertEquals(Left("refused"), failed)
     assertEquals(List("open a", "close a", "open b", "close b"), log.result())

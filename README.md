@@ -14,7 +14,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 | Module | Artifact | What is in it |
 |---|---|---|
 | `api` | `okay-direct-api` | perform and handle, of no implementation |
-| `std` | `okay-direct-std` | `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Async` (structured concurrency, time), `VirtualClock`, `Channel`, `Delimited`, `Reflection` on the API |
+| `std` | `okay-direct-std` | `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emits`, `Async` (structured concurrency, time), `VirtualClock`, `Channel`, `Delimited`, `Reflection` on the API |
 | `tck` | `okay-direct-tck` | what every implementation does: JUnit tests to extend |
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation` |
 | `threads` | `okay-direct-threads` | on virtual threads, portable |
@@ -73,10 +73,10 @@ sealed interface Prices {
 }
 
 // the program: plain Java; it performs inside a stream's lambda, and knows nothing of where prices come from
-static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
+static int total(Effect<Prices> prices, Effect<Throws<String>> fail, List<String> cart) {
     return cart.stream()
         .mapToInt(item -> prices.perform(new Prices.Price(item))
-            .orElseGet(() -> Fail.raise(fail, "no price for " + item)))
+            .orElseGet(() -> Throws.raise(fail, "no price for " + item)))
         .sum();
 }
 ```
@@ -120,26 +120,26 @@ var table = Map.of("tea", 30, "cake", 50, "jam", 20);
 PriceService service = item -> CompletableFuture.supplyAsync(() -> Optional.ofNullable(table.get(item)),
     CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS));
 
-Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
-// Success[value=100]
+Throws.run(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "cake", "jam"))));
+// Ok[value=100]
 
-Fail.attempt(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
-// Failure[error=no price for coffee] — and cake is never priced
+Throws.run(fx, String.class, fail -> pricesFrom(fx, service, prices -> total(prices, fail, List.of("tea", "coffee", "cake"))));
+// Err[error=no price for coffee] — and cake is never priced
 
-Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
+Trail.keep(fx, trail -> Throws.run(fx, String.class, fail ->
     pricesFrom(fx, service, prices -> total(sale(prices, trail), fail, List.of("tea", "cake", "jam")))));
-// Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Success[value=90]]
+// Kept[lines=[tea: 30 -> 27, cake: 50 -> 45, jam: 20 -> 18], value=Ok[value=90]]
 ```
 
 - **An effect inside a stream's lambda.** In monadic style `mapToInt` cannot wait for a monad: it would be rewritten
   with `traverse` and `flatMap`. Here the stack from `perform` up to its handler is suspended, whatever is between.
-- **An early exit from the middle of a stream.** At `coffee`, `Fail`'s handler does not resume the rest: it unwinds,
-  the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Failure`.
+- **An early exit from the middle of a stream.** At `coffee`, `Throws`'s handler does not resume the rest: it unwinds,
+  the stream stops, `cake` is never priced. No exception reaches the caller: it gets a value, `Err`.
 - **Asynchrony without async code.** The service answers on another thread, later; `total` does not know it: its
   handler waits for the future, and on a virtual thread a wait holds no OS thread. No `thenCompose`, no callback.
 - **The meaning changes, the program does not.** `total` is the same; the prices come from the service, from a sale on
   top of it with a trail, from a database, from a test — whichever handler is installed.
-- **The signature lists the effects.** `total(Effect<Prices>, Effect<Fail<String>>, ...)` says what it may do; without
+- **The signature lists the effects.** `total(Effect<Prices>, Effect<Throws<String>>, ...)` says what it may do; without
   a handler of prices there is no capability to call it with: it does not compile.
 
 Or with the capabilities implicit, found by key wherever the body calls:
@@ -215,7 +215,7 @@ clock.advance(Duration.ofSeconds(1));       // "fast"; the slow one cancelled, i
 ## SQL and tracing
 
 Module `sql`: a statement is an operation, `Transaction.run(fx, db, sql -> ...)` its handler — committed when the body
-returns, rolled back when it fails or when a `Fail` further out drops its rest; `Sql.readOnly` and `Sql.logged` control
+returns, rolled back when it fails or when a `Throws` further out drops its rest; `Sql.readOnly` and `Sql.logged` control
 the capability. Module `otel`: `Tracing.traced(fx, tracer)` makes every operation a span of OpenTelemetry, awaits
 included, with no change to the program ([guide](docs/guide.md#sql-a-transaction-is-a-handler)).
 
@@ -224,7 +224,7 @@ included, with no change to the program ([guide](docs/guide.md#sql-a-transaction
 In direct style an `IO` or a `ZIO` in a body is AWAITED: an operation whose handler runs it on the library's runtime
 while the body waits, cheap on a virtual thread. A body becomes an `IO` or a `ZIO` the other way, run on a blocking
 thread, interruptibly. A ZIO's channels are effects, as in okay-simple: its environment `Reader[ZEnvironment[R]]`, its
-typed error `Fail[E]`, a throw a defect:
+typed error `Throws[E]`, a throw a defect:
 
 ```scala
 val program: ZIO[Int, String, Int] = toZIO[Int, String, Int](fromZIO(ZIO.serviceWith[Int](_ + 1)) + 1)
@@ -252,7 +252,7 @@ sealed interface Pay {
 
 Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
     switch (op) {
-        case Pay.Transfer t when t.amount() > limit -> Fail.raise(fail, "refused: " + t.amount());
+        case Pay.Transfer t when t.amount() > limit -> Throws.raise(fail, "refused: " + t.amount());
         case Pay.Transfer t -> k.answer(t, pass.pass(new Pay.Transfer(t.to().trim(), t.amount())));
         case Pay.Balance b -> k.answer(b, pass.pass(b));
     }
@@ -284,13 +284,13 @@ def answer[X](op: State[S] & Op[State[S], X]): X = op match
   case Get() => state
   case Put(s) => state = s
 
-def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Fail[String]]): Int =
+def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Throws[String]]): Int =
   val base = Reader.ask[Int]
   State.put(State.get[Int] + 1)
-  if heads then base else Fail.raise("negative")
+  if heads then base else Throws.raise("negative")
 
 given Effects = LoomEffects()
-Reader.run(42)(State.run(0)(Fail.attempt(program(true))))
+Reader.run(42)(State.run(0)(Throws.run(program(true))))
 ```
 
 Control and audit in Scala 3: an interceptor's clause returns the answer, `X` known in each case.
@@ -300,13 +300,13 @@ enum Pay:
   case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
   case Balance() extends Pay, AuditedOp[Pay, Int]
 
-def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]) = new Interceptor[Pay, Audited[Pay]]:
+def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]) = new Interceptor[Pay, Audited[Pay]]:
   def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
-    case Pay.Transfer(to, amount) if amount > limit => Fail.raise(s"refused: $amount")
+    case Pay.Transfer(to, amount) if amount > limit => Throws.raise(s"refused: $amount")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim, amount))
     case Pay.Balance() => pass(Pay.Balance())
 
-Trail.keep(Fail.attempt(bank(1000)(audit(guarded(1000))(payments))))
+Trail.keep(Throws.run(bank(1000)(audit(guarded(1000))(payments))))
 observe(telling)(Reader.run(5)(State.run(1)(program)))   // the observer's implementation, a context parameter
 ```
 
@@ -317,7 +317,7 @@ the answer type from a typed pattern but its match analysis is wrong on it, so a
 operation as the witness, as in Java: `case get: Get[S] => k(get, state)`.
 
 ```scala
-Reader.run(42) { implicit r => State.run(0) { implicit s => Fail.attempt[String, Int] { implicit f => program(true) } } }
+Reader.run(42) { implicit r => State.run(0) { implicit s => Throws.run[String, Int] { implicit f => program(true) } } }
 ```
 
 Control and audit in Scala 2 (`Control._`): `intercept`, `handleSensitive`, `audit`, `observe`, `Trail`; a clause

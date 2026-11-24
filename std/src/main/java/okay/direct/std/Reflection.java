@@ -20,7 +20,7 @@ import okay.direct.MultiEffects;
  * Optional<Integer> sum = Reflection.reify(fx, Optional::of,
  *     (Delimited.Prompt<Optional<Integer>> p) -> get(p, Optional.of(1)) + get(p, Optional.of(2)));
  * }</pre>
- * The pairs of Optional ({@link #optional}), of an either ({@link #outcome}) and of a writer ({@link #written}) are
+ * The pairs of Optional ({@link #optional}), of an either ({@link #result}) and of a writer ({@link #written}) are
  * here already, typed, each with its {@code get}. A monad whose bind calls the rest LATER — a reader, a state, a
  * future — cannot be reflected by a rest that dies with its clause: use the effect instead ({@link Reader},
  * {@link State}), or for a future {@link Async}, whose rest is detached.
@@ -66,22 +66,22 @@ public final class Reflection {
     }
 
     /**
-     * THE EITHER MONAD, {@link Fail.Outcome}, reified: the body's value as a success, or the first failure a
+     * THE EITHER MONAD, {@link Throws.Result}, reified: the body's value as a success, or the first failure a
      * {@link #get} in it met — the rest of the body then not run.
      * <pre>{@code
-     * Outcome<String, Integer> total = Reflection.outcome(fx, p -> get(p, parse("40")) + get(p, parse("2")));
+     * Result<String, Integer> total = Reflection.result(fx, p -> get(p, parse("40")) + get(p, parse("2")));
      * }</pre>
      */
-    public static <E, R> Fail.Outcome<E, R> outcome(Effects effects,
-            Function<Delimited.Prompt<Fail.Outcome<E, R>>, R> body) {
-        return reify(effects, Fail.Success::new, body);
+    public static <E, R> Throws.Result<E, R> result(Effects effects,
+            Function<Delimited.Prompt<Throws.Result<E, R>>, R> body) {
+        return reify(effects, Throws.Ok::new, body);
     }
 
-    /** The value of a success, under {@link #outcome}; a failure is the outcome's, the rest dropped. */
-    public static <E, A, R> A get(Delimited.Prompt<Fail.Outcome<E, R>> prompt, Fail.Outcome<E, A> m) {
-        return reflect(prompt, m, (Fail.Outcome<E, A> o, Function<A, Fail.Outcome<E, R>> k) -> switch (o) {
-            case Fail.Success<E, A> success -> k.apply(success.value());
-            case Fail.Failure<E, A> failure -> new Fail.Failure<>(failure.error());
+    /** The value of a success, under {@link #result}; a failure is the result's, the rest dropped. */
+    public static <E, A, R> A get(Delimited.Prompt<Throws.Result<E, R>> prompt, Throws.Result<E, A> m) {
+        return reflect(prompt, m, (Throws.Result<E, A> o, Function<A, Throws.Result<E, R>> k) -> switch (o) {
+            case Throws.Ok<E, A> success -> k.apply(success.value());
+            case Throws.Err<E, A> failure -> new Throws.Err<>(failure.error());
         });
     }
 

@@ -16,7 +16,7 @@ import okay.direct.Fx;
 import okay.direct.Program;
 import okay.effect.Pure;
 import okay.direct.InPlace;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
 import org.junit.jupiter.api.Test;
@@ -95,16 +95,31 @@ interface RowsTests {
 
     @Test
     default void aFailureDropsTheRestAndTheOrderOfHandlersIsTheMeaning() {
-        Program<Integer, Eff<Fail<String>, Eff<State<Integer>, Pure>>> p = fx -> {
+        Program<Integer, Eff<Throws<String>, Eff<State<Integer>, Pure>>> p = fx -> {
             Effect<State<Integer>> state = Fx.second(fx);
             State.put(state, 1);
-            Fail.raise(Fx.head(fx), "stop");
+            Throws.raise(Fx.head(fx), "stop");
             State.put(state, 2);
             return 0;
         };
         // the state outside the failure: what was put before the failure stays
-        assertEquals(new State.Final<>(1, new Fail.Failure<String, Integer>("stop")),
-                Fx.run(effects(), State.run(0, Fail.attempt(String.class, p))));
+        assertEquals(new State.Final<>(1, new Throws.Err<String, Integer>("stop")),
+                Fx.run(effects(), State.run(0, Throws.run(String.class, p))));
+    }
+
+    @Test
+    default void aFailureIsRecoveredFromInARowAndInABody() {
+        Program<Integer, Eff<Throws<String>, Eff<State<Integer>, Pure>>> p = fx -> {
+            State.put(Fx.second(fx), 1);
+            return Throws.raise(Fx.head(fx), "stop");
+        };
+        assertEquals(new State.Final<>(1, -1),
+                Fx.run(effects(), State.run(0, Throws.recover((String error) -> -1, p))));
+        int recovered = Throws.recover(effects(), String.class, error -> error.length() + 3,
+                fail -> Throws.raise(fail, "four"));
+        assertEquals(7, recovered);
+        int fine = Throws.recover(effects(), String.class, error -> -1, fail -> 2);
+        assertEquals(2, fine);
     }
 
     @Test
@@ -128,14 +143,14 @@ interface RowsTests {
 
     @Test
     default void checkedExceptionsMeetTheRowAtItsEnds() {
-        Program<String, Eff<Fail<java.io.IOException>, Pure>> read = fx -> Fail.catching(Fx.head(fx),
+        Program<String, Eff<Throws<java.io.IOException>, Pure>> read = fx -> Throws.catching(Fx.head(fx),
                 java.io.IOException.class, () -> {
                     throw new java.io.FileNotFoundException("no.txt");
                 });
-        var thrown = assertThrows(java.io.IOException.class, () -> Fail.rethrow(effects(), read));
+        var thrown = assertThrows(java.io.IOException.class, () -> Throws.rethrow(effects(), read));
         assertEquals("no.txt", thrown.getMessage());
-        Program<String, Eff<Fail<java.io.IOException>, Pure>> fine = fx -> Fail.catching(Fx.head(fx),
+        Program<String, Eff<Throws<java.io.IOException>, Pure>> fine = fx -> Throws.catching(Fx.head(fx),
                 java.io.IOException.class, () -> "text");
-        assertEquals("text", assertDoesNotThrow(() -> Fail.rethrow(effects(), fine)));
+        assertEquals("text", assertDoesNotThrow(() -> Throws.rethrow(effects(), fine)));
     }
 }

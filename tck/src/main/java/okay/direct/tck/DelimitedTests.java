@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import okay.direct.Effects;
 import okay.direct.std.Delimited;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import okay.direct.std.Delimited.Prompt;
 import okay.direct.std.Reflection;
 import okay.direct.std.State;
@@ -139,29 +139,29 @@ interface DelimitedTests {
         assertEquals(new State.Final<>(11, Optional.of(21)), result);
     }
 
-    static Fail.Outcome<String, Integer> parse(String s) {
+    static Throws.Result<String, Integer> parse(String s) {
         try {
-            return new Fail.Success<>(Integer.parseInt(s));
+            return new Throws.Ok<>(Integer.parseInt(s));
         } catch (NumberFormatException e) {
-            return new Fail.Failure<>("not a number: " + s);
+            return new Throws.Err<>("not a number: " + s);
         }
     }
 
     @Test
     default void anOutcomeReflected() {
         var fx = effects();
-        Fail.Outcome<String, Integer> sum = Reflection.outcome(fx, p -> Reflection.get(p, parse("40"))
+        Throws.Result<String, Integer> sum = Reflection.result(fx, p -> Reflection.get(p, parse("40"))
             + Reflection.get(p, parse("2")));
-        assertEquals(new Fail.Success<String, Integer>(42), sum);
+        assertEquals(new Throws.Ok<String, Integer>(42), sum);
         var cleaned = new AtomicBoolean();
-        Fail.Outcome<String, Integer> failed = Reflection.outcome(fx, p -> {
+        Throws.Result<String, Integer> failed = Reflection.result(fx, p -> {
             try {
                 return Reflection.get(p, parse("4o")) + Reflection.get(p, parse("2"));
             } finally {
                 cleaned.set(true);
             }
         });
-        assertEquals(new Fail.Failure<String, Integer>("not a number: 4o"), failed);
+        assertEquals(new Throws.Err<String, Integer>("not a number: 4o"), failed);
         assertTrue(cleaned.get());
     }
 

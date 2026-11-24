@@ -27,17 +27,17 @@ capabilities (`Effect<F>`) it needs as parameters; its signature lists what it m
 ```java
 import okay.direct.*;
 import okay.effect.Op;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 
 sealed interface Prices {
     record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price> {}
 }
 
 // the program: plain Java, performs inside a stream's lambda
-static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
+static int total(Effect<Prices> prices, Effect<Throws<String>> fail, List<String> cart) {
     return cart.stream()
         .mapToInt(item -> prices.perform(new Prices.Price(item))
-            .orElseGet(() -> Fail.raise(fail, "no price for " + item)))
+            .orElseGet(() -> Throws.raise(fail, "no price for " + item)))
         .sum();
 }
 
@@ -55,30 +55,30 @@ static <A> A pricesFrom(Effects fx, Map<String, Integer> table, Body<Prices, A, 
 
 // the entry point: the implementation made once, the handlers installed around the program
 Effects fx = new ThreadEffects();   // or new LoomEffects() (faster, needs JVM flags, see pitfalls)
-Fail.attempt(fx, String.class, fail -> pricesFrom(fx, table, prices -> total(prices, fail, List.of("tea", "cake"))));
-// Success[value=80]; with "coffee" in the cart: Failure[error=no price for coffee], the rest of the stream dropped
+Throws.run(fx, String.class, fail -> pricesFrom(fx, table, prices -> total(prices, fail, List.of("tea", "cake"))));
+// Ok[value=80]; with "coffee" in the cart: Err[error=no price for coffee], the rest of the stream dropped
 ```
 
 Rows (master, 0.1.1-SNAPSHOT): a program needing several effects takes ONE parameter typed by its row,
 `Fx<? extends Eff<State<Integer>, ? extends Eff<Log, ?>>>`, places by position (`Fx.head`, `Fx.second`, `Fx.tail`);
-`Program<A, R>`, `Fx.handle`, `State.run(0, p)`, `Fail.attempt(p)`, `Fx.run(fx, p)` for `Pure`; errors are `Fail` in the
-row (`Fail.catching`/`Fail.rethrow`). The picture behind it: [docs/concept.md](docs/concept.md).
+`Program<A, R>`, `Fx.handle`, `State.run(0, p)`, `Throws.run(p)`, `Fx.run(fx, p)` for `Pure`; errors are `Throws` in the
+row (`Throws.recover`, `Throws.catching`/`Throws.rethrow`). The picture behind it: [docs/concept.md](docs/concept.md).
 
 Handler kinds: `InPlace` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
 wrap the result), `StatefulHandler` (state per resumption), `MultiHandler` (`MultiResume`, only on a `MultiEffects`).
-Standard effects in `okay.direct.std`: `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Async`, `VirtualClock`,
+Standard effects in `okay.direct.std`: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emits`, `Async`, `VirtualClock`,
 `Channel`, `Delimited`, `Reflection`; `okay-direct-sql` has `Transaction`/`Sql`, `okay-direct-otel` `Tracing.traced`.
 
 Scala 3 (`import okay.direct.scala3.*`): an effect is an enum (a GADT), a capability a context parameter:
 
 ```scala
-def program(using Effect[Reader[Int]], Effect[State[Int]], Effect[Fail[String]]): Int =
+def program(using Effect[Reader[Int]], Effect[State[Int]], Effect[Throws[String]]): Int =
   val base = Reader.ask[Int]
   State.put(State.get[Int] + 1)
-  if base < 0 then Fail.raise(s"negative: $base") else base * 2
+  if base < 0 then Throws.raise(s"negative: $base") else base * 2
 
 given Effects = LoomEffects()
-Reader.run(21)(State.run(0)(Fail.attempt(program)))     // (1,Right(42))
+Reader.run(21)(State.run(0)(Throws.run(program)))     // (1,Right(42))
 ```
 
 ### Control and audit
@@ -101,14 +101,14 @@ static <A, E extends Exception> A bank(Effects fx, Audit.VaultBody<Pay, A, E> bo
 }
 static String checkout(Effect<Audited<Pay>> pay, int amount) { return pay.perform(new Pay.Transfer("shop", amount)); }
 
-Trail.keep(fx, trail -> Fail.attempt(fx, String.class, fail ->
+Trail.keep(fx, trail -> Throws.run(fx, String.class, fail ->
     bank(fx, vault -> Audit.audit(vault, (op, pass, k) -> {
         switch (op) {
-            case Pay.Transfer t when t.amount() > 100 -> Fail.raise(fail, "refused: " + t.amount());
+            case Pay.Transfer t when t.amount() > 100 -> Throws.raise(fail, "refused: " + t.amount());
             case Pay.Transfer t -> { Trail.record(trail, "transfer " + t.amount()); k.answer(t, pass.pass(t)); }
         }
     }, pay -> checkout(pay, 80)))));
-// Kept[lines=[transfer 80], value=Success[value=sent 80 to shop]]
+// Kept[lines=[transfer 80], value=Ok[value=sent 80 to shop]]
 ```
 
 Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on, change, refuse);
@@ -117,7 +117,7 @@ Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on
 
 ### Design rules
 
-- Business logic = programs over declared effects. The parameters (`Effect<Prices>`, `Effect<Fail<String>>`) say what
+- Business logic = programs over declared effects. The parameters (`Effect<Prices>`, `Effect<Throws<String>>`) say what
   a program may do; add an effect rather than reaching for something outside it.
 - Real resources (DB, HTTP, files, clock, keys) live only in handlers built by the host at the entry point. Programs
   get data, capabilities and ids — never a live client, `DataSource` or `HttpClient`.

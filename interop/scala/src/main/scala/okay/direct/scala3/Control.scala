@@ -5,7 +5,7 @@ import okay.direct.{Answer, Audit, Audited, Effect, Effects, Observer}
 /**
  * CONTROL AND AUDIT, the Scala 3 way. An interceptor's clause gets the operation as `C & Op[F, X]` and
  * returns its answer, `X` known in each case: it may tell, pass the operation on (`pass(op)`), change it or its
- * answer, or refuse — throw, or `Fail.raise`, whose type is `Nothing`.
+ * answer, or refuse — throw, or `Throws.raise`, whose type is `Nothing`.
  */
 trait Interceptor[C, F]:
   def on[X](op: C & Op[F, X], pass: Pass[F]): X

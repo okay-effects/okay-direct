@@ -34,19 +34,23 @@ object Reader:
         case Ask() => env
     )(body)
 
-/** Failure with an error of type E: the rest of the body dropped. */
-enum Fail[E]:
-  case Raise[E](error: E) extends Fail[E], Op[Fail[E], Nothing]
+/** THROWS: a failure with an error of type E; the rest of the body dropped, unwound, before it is answered. */
+enum Throws[E]:
+  case Raise[E](error: E) extends Throws[E], Op[Throws[E], Nothing]
 
-object Fail:
-  def raise[E](error: E)(using fail: Effect[Fail[E]]): Nothing = fail.perform(Raise(error))
+object Throws:
+  def raise[E](error: E)(using fail: Effect[Throws[E]]): Nothing = fail.perform(Raise(error))
 
-  def attempt[E, A](body: Effect[Fail[E]] ?=> A)(using Effects): Either[E, A] =
-    handle(new Handler[Fail[E], A, Either[E, A]]:
+  def run[E, A](body: Effect[Throws[E]] ?=> A)(using Effects): Either[E, A] =
+    handle(new Handler[Throws[E], A, Either[E, A]]:
       def ret(a: A) = Right(a)
-      def on[X](op: Fail[E] & Op[Fail[E], X], k: X => Either[E, A]) = op match
+      def on[X](op: Throws[E] & Op[Throws[E], X], k: X => Either[E, A]) = op match
         case Raise(e) => Left(e)
     )(body)
+
+  /** The body's value, or what `rescue` makes of its failure: the rest dropped, unwound, first. */
+  def recover[E, A](rescue: E => A)(body: Effect[Throws[E]] ?=> A)(using Effects): A =
+    run[E, A](body).fold(rescue, identity)
 
 /** A choice of two ways: its handler resumes the rest twice, so it needs a `MultiEffects`. */
 enum Choose:

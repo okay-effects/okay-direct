@@ -9,8 +9,8 @@ package okay.direct;
  * ({@code Fx<? extends Eff<State<Integer>, ?>>}) is a program of every row that starts so.
  *
  * <p>A program throws no checked exception: an error it may end with is an effect of its row
- * ({@code Fail<IOException>}), so it has a place and an order among the handlers. Java's checked exceptions meet the
- * row at its ends: {@code Fail.catching} turns a call that throws into a failure, {@code Fail.rethrow} a failure
+ * ({@code Throws<IOException>}), so it has a place and an order among the handlers. Java's checked exceptions meet the
+ * row at its ends: {@code Throws.catching} turns a call that throws into a failure, {@code Throws.rethrow} a failure
  * left at the end into a thrown exception. (A type parameter for the exception would be lost by Java's inference as
  * soon as two handlers are nested.)
  */

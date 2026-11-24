@@ -15,12 +15,12 @@ import okay.direct.Interceptor;
  * SQL AS AN EFFECT: a statement is an operation, data — its text and its parameters — and a transaction is its
  * handler ({@link Transaction#run}). A program performs statements and does not know the connection; the handler
  * commits when the body returns and rolls back when it fails, or when its rest is dropped by a handler further out
- * (a {@code Fail}): the body unwinds through the transaction.
+ * (a {@code Throws}): the body unwinds through the transaction.
  * <pre>{@code
- * Outcome<String, Void> transfer = Fail.attempt(fx, String.class, fail -> Transaction.run(fx, db, sql -> {
+ * Result<String, Void> transfer = Throws.run(fx, String.class, fail -> Transaction.run(fx, db, sql -> {
  *     Sql.update(sql, "update account set balance = balance - ? where id = ?", 50, "ann");
  *     if (Sql.one(sql, row -> row.getInt(1), "select balance from account where id = ?", "ann").orElseThrow() < 0)
- *         Fail.raise(fail, "not enough money");       // rolled back
+ *         Throws.raise(fail, "not enough money");       // rolled back
  *     Sql.update(sql, "update account set balance = balance + ? where id = ?", 50, "bob");
  *     return null;
  * }));

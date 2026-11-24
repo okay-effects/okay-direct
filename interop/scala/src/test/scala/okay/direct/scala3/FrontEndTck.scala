@@ -7,11 +7,11 @@ import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.Test
 
 /** Reads a base, counts in state, fails on a negative result: no capability passed by hand. */
-def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Fail[String]]): Int =
+def program(heads: Boolean)(using Effect[Reader[Int]], Effect[State[Int]], Effect[Throws[String]]): Int =
   val base = Reader.ask[Int]
   State.put(State.get[Int] + 1)
   val result = if heads then base else -base
-  if result < 0 then Fail.raise(s"negative: $result") else result
+  if result < 0 then Throws.raise(s"negative: $result") else result
 
 /** The front end's programs, on an implementation. */
 abstract class FrontEndTck:
@@ -19,8 +19,12 @@ abstract class FrontEndTck:
   def effects: Effects
 
   @Test def handlersNestInAnyOrder(): Unit =
-    assertEquals((1, Right(42)), Reader.run(42)(State.run(0)(Fail.attempt(program(true)))))
-    assertEquals(Left("negative: -42"), Fail.attempt(State.run(0)(Reader.run(42)(program(false)))))
+    assertEquals((1, Right(42)), Reader.run(42)(State.run(0)(Throws.run(program(true)))))
+    assertEquals(Left("negative: -42"), Throws.run(State.run(0)(Reader.run(42)(program(false)))))
+
+  @Test def aFailureIsRecoveredFrom(): Unit =
+    assertEquals(-1, Throws.recover[String, Int](_ => -1)(Reader.run(42)(State.run(0)(program(false)))._2))
+    assertEquals(42, Throws.recover[String, Int](_ => -1)(Reader.run(42)(State.run(0)(program(true)))._2))
 
   @Test def operationsInLambdasAndAcrossFunctions(): Unit =
     def add(x: Int)(using Effect[State[Int]]): Unit = State.put(State.get[Int] + x)
@@ -32,8 +36,8 @@ abstract class FrontEndTck:
   @Test def anAbandonedRestRunsItsFinallyBlocks(): Unit =
     var cleaned = false
     val result = State.run(0):
-      Fail.attempt[String, Int]:
-        try Fail.raise("boom")
+      Throws.run[String, Int]:
+        try Throws.raise("boom")
         finally
           cleaned = true
           State.put(7)

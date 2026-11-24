@@ -21,7 +21,7 @@ import okay.direct.std.Delimited;
 import okay.direct.std.Delimited.Prompt;
 import okay.direct.std.Reflection;
 import okay.direct.std.Choose;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import okay.direct.std.State;
 import org.junit.jupiter.api.Test;
 
@@ -76,9 +76,9 @@ public abstract class MultiEffectsTck extends EffectsTck {
     @Test
     void aFailureInsideABranchIsThatBranchs() {
         var fx = effects();
-        var all = Choose.all(fx, choose -> Fail.<String, Integer, RuntimeException>attempt(fx,
-            fail -> Choose.flip(choose) ? 1 : Fail.<String, Integer>raise(fail, "tails")));
-        assertEquals(List.of(new Fail.Success<String, Integer>(1), new Fail.Failure<String, Integer>("tails")), all);
+        var all = Choose.all(fx, choose -> Throws.<String, Integer, RuntimeException>run(fx,
+            fail -> Choose.flip(choose) ? 1 : Throws.<String, Integer>raise(fail, "tails")));
+        assertEquals(List.of(new Throws.Ok<String, Integer>(1), new Throws.Err<String, Integer>("tails")), all);
     }
 
     @Test

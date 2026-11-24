@@ -59,7 +59,7 @@ Rows came back as a TYPE over capabilities, not as a lookup: `Fx<Eff<State<Integ
 capabilities whose type is the row, its places taken by position (`Fx.head`, `Fx.second`) as the handlers are
 nested. Nothing is found by type, so the erasure problem above does not arise, and a program says what it may do in
 one parameter. The places are written, as Java needs, but only where they are read. Programs of rows throw no checked
-exception: with a type parameter for it, javac infers `Exception` once two handlers are nested; errors are `Fail` in
+exception: with a type parameter for it, javac infers `Exception` once two handlers are nested; errors are `Throws` in
 the row ([concept](concept.md#4-rows-in-java-the-rules)).
 
 ## Checked exceptions: as markers, not as control
@@ -104,8 +104,8 @@ once reflects anywhere; any other, by `reifyMulti` on a `MultiEffects`.
 
 A clause that does not resume drops the rest; on Loom the continuation could just be forgotten, on threads the body's
 thread would wait forever. Both unwind it instead, the same way: `Abandoned` is thrown at the `perform` the rest waits
-in, so `finally` blocks run — resources are released, even under a `Fail`. `Abandoned` knows whose rest it is, and the
-body of a handler nested inside lets it through to the body it belongs to.
+in, so `finally` blocks run — resources are released, even under a `Throws`. `Abandoned` knows whose rest it is, and
+the body of a handler nested inside lets it through to the body it belongs to.
 
 ## Scoped values and continuations
 
@@ -145,7 +145,7 @@ wraps every capability its handlers hand out.
 
 | | Found by | Fixed |
 |---|---|---|
-| a body's handler swallowed the unwinding of an outer handler's dropped rest | the audit's refusal through `Fail`, under a bank | `Abandoned` knows its owner |
+| a body's handler swallowed the unwinding of an outer handler's dropped rest | the audit's refusal through `Throws`, under a bank | `Abandoned` knows its owner |
 | an in-place clause that threw left the body waiting | a refusal from an in-place handler | the body unwound |
 | `Audited` as a class broke on javac's bridge cast | the audit tests | an interface the operations implement |
 | scoped values leaked between a body and its clause on Loom | `Implicit`'s clause test | the bindings switched with the stack |

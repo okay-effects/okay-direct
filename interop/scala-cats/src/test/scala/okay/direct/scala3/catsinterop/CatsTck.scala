@@ -5,7 +5,7 @@ import cats.effect.unsafe.IORuntime
 import okay.direct.Effects
 import okay.direct.loom.LoomEffects
 import okay.direct.threads.ThreadEffects
-import okay.direct.scala3.{Emits, Fail, State, reflect, reify}
+import okay.direct.scala3.{Emits, Throws, State, reflect, reify}
 import scala.concurrent.duration.*
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
@@ -42,7 +42,7 @@ abstract class CatsTck:
     val log = List.newBuilder[String]
     def resource(name: String) = cats.effect.Resource.make(IO(log += s"open $name").as(name))(n => IO(log += s"close $n").void)
     val ok = runAwaiting(State.run(0)(use(resource("a"))(name => { State.put(1); name.length })))
-    val failed = runAwaiting(Fail.attempt[String, Int](use(resource("b"))(_ => Fail.raise("refused"))))
+    val failed = runAwaiting(Throws.run[String, Int](use(resource("b"))(_ => Throws.raise("refused"))))
     assertEquals((1, 1), ok)
     assertEquals(Left("refused"), failed)
     assertEquals(List("open a", "close a", "open b", "close b"), log.result())

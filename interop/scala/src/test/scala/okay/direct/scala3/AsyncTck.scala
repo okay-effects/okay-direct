@@ -134,14 +134,14 @@ abstract class AsyncTck:
       Sql.update("insert into account values (?, ?), (?, ?)", "ann", 100, "bob", 0)
     def balances = Transaction.run(db)(Sql.query("select id, balance from account order by id")(r =>
       r.getString(1) -> r.getInt(2)).toMap)
-    def transfer(amount: Int)(using Effect[Sql], Effect[Fail[String]]): Unit =
+    def transfer(amount: Int)(using Effect[Sql], Effect[Throws[String]]): Unit =
       Sql.update("update account set balance = balance - ? where id = ?", amount, "ann")
-      if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Fail.raise("too poor")
+      if Sql.one("select balance from account where id = ?", "ann")(_.getInt(1)).get < 0 then Throws.raise("too poor")
       Sql.update("update account set balance = balance + ? where id = ?", amount, "bob")
-    assertEquals(Left("too poor"), Fail.attempt[String, Unit](Transaction.run(db)(transfer(130))))
+    assertEquals(Left("too poor"), Throws.run[String, Unit](Transaction.run(db)(transfer(130))))
     assertEquals(Map("ann" -> 100, "bob" -> 0), balances)
     var log = List.empty[String]
-    assertEquals(Right(()), Fail.attempt[String, Unit](Transaction.run(db)(transfer(30)(using Sql.logged(log :+= _)))))
+    assertEquals(Right(()), Throws.run[String, Unit](Transaction.run(db)(transfer(30)(using Sql.logged(log :+= _)))))
     assertEquals(Map("ann" -> 70, "bob" -> 30), balances)
     assertEquals(3, log.size)
     assertThrows(classOf[Sql.Refused], () => Transaction.run(db)(Sql.update("delete from account")(using Sql.readOnly)))

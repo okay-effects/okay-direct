@@ -22,7 +22,7 @@ import okay.direct.Effects;
 import okay.direct.Later;
 import okay.direct.InPlace;
 import okay.direct.std.Async;
-import okay.direct.std.Fail;
+import okay.direct.std.Throws;
 import org.junit.jupiter.api.Test;
 
 /** What an implementation with detached continuations does too: a rest resumed after its clause, from anywhere. */
@@ -56,10 +56,10 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
         record Price(String item) implements Prices, Op<Prices, Optional<Integer>, Price> {}
     }
 
-    static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> cart) {
+    static int total(Effect<Prices> prices, Effect<Throws<String>> fail, List<String> cart) {
         return cart.stream()
             .mapToInt(item -> prices.perform(new Prices.Price(item))
-                .orElseGet(() -> Fail.raise(fail, "no price for " + item)))
+                .orElseGet(() -> Throws.raise(fail, "no price for " + item)))
             .sum();
     }
 
@@ -82,12 +82,12 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
     void theShopAwaitingAnAsynchronousService() throws Exception {
         var fx = effects();
         var table = Map.of("tea", 30, "cake", 50, "jam", 20);
-        var ok = Async.run(fx, async -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
+        var ok = Async.run(fx, async -> Throws.run(fx, (Effect<Throws<String>> fail) ->
             pricesFrom(fx, async, table, prices -> total(prices, fail, List.of("tea", "cake", "jam")))));
-        var missing = Async.run(fx, async -> Fail.attempt(fx, (Effect<Fail<String>> fail) ->
+        var missing = Async.run(fx, async -> Throws.run(fx, (Effect<Throws<String>> fail) ->
             pricesFrom(fx, async, table, prices -> total(prices, fail, List.of("tea", "coffee", "cake")))));
-        assertEquals(new Fail.Success<String, Integer>(100), ok.get(5, TimeUnit.SECONDS));
-        assertEquals(new Fail.Failure<String, Integer>("no price for coffee"), missing.get(5, TimeUnit.SECONDS));
+        assertEquals(new Throws.Ok<String, Integer>(100), ok.get(5, TimeUnit.SECONDS));
+        assertEquals(new Throws.Err<String, Integer>("no price for coffee"), missing.get(5, TimeUnit.SECONDS));
     }
 
     sealed interface Ask {
