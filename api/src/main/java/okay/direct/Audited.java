@@ -1,21 +1,14 @@
 package okay.direct;
 
-import okay.effect.Op;
 /**
- * THE FAMILY OF A SENSITIVE EFFECT's operations. A sensitive effect {@code C} is a sealed interface like any, but
- * its operations are {@link Audited.Op}s, of the family {@code Audited<C>}:
- * <pre>{@code
- * sealed interface Pay {
- *     record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
- *     record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
- * }
- * }</pre>
- * So they are performed through an {@code Effect<Audited<Pay>>}, which a program gets from {@link Audit#audit}
- * alone; and answered by the handler {@link Audit#handle} installs, alone: a handler of {@code Audited<Pay>}
- * written by hand gets each operation as an {@code Audited<Pay>}, of no case and no answer's type, so it can drop
- * the rest but not answer it.
+ * THE AUDITED PLACE of a sensitive effect C: what {@link Audit#handle} gives its body in place of a capability.
+ * Nothing can be performed through it; only {@link Audit#audit} takes it, and gives its own body the capability,
+ * {@code Effect<Sensitive<C>>}, every operation through an interceptor first.
  */
-public interface Audited<C> {
-    /** An operation of the sensitive effect C, answered by an X. */
-    interface Op<C, X, Self extends Audited<C>> extends Audited<C>, okay.effect.Op<Audited<C>, X, Self> {}
+public final class Audited<C> {
+    final Effect<Sensitive<C>> effect;
+
+    Audited(Effect<Sensitive<C>> effect) {
+        this.effect = effect;
+    }
 }

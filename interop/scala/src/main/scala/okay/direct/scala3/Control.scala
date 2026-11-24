@@ -1,6 +1,6 @@
 package okay.direct.scala3
 
-import okay.direct.{Answer, Audit, Audited, Effect, Effects, Observer}
+import okay.direct.{Answer, Audit, Audited, Effect, Effects, Observer, Sensitive}
 
 /**
  * CONTROL AND AUDIT, the Scala 3 way. An interceptor's clause gets the operation as `C & Op[F, X]` and
@@ -17,7 +17,7 @@ trait Pass[F]:
 /** A handler of the sensitive effect C: each operation answered in place, `X` known in each case. */
 trait SensitiveHandler[C, A, B]:
   def ret(a: A): B
-  def answer[X](op: C & AuditedOp[C, X]): X
+  def answer[X](op: C & SensitiveOp[C, X]): X
 
 private def toJava[C, F](i: Interceptor[C, F]): okay.direct.Interceptor[C, F] = (op, pass, k) =>
   op match
@@ -29,21 +29,21 @@ private def toJava[C, F](i: Interceptor[C, F]): okay.direct.Interceptor[C, F] = 
 def intercept[F, A](i: Interceptor[F, F])(body: Effect[F] ?=> A)(using outer: Effect[F]): A =
   body(using okay.direct.Interceptor.intercept(outer, toJava(i)))
 
-/** The sensitive effect C handled by `h`: the body gets its vault, through which only `audit` performs. */
-def handleSensitive[C, A, B](h: SensitiveHandler[C, A, B])(body: Audit.Vault[C] ?=> A)(using fx: Effects): B =
+/** The sensitive effect C handled by `h`: the body gets its `Audited` place, through which only `audit` performs. */
+def handleSensitive[C, A, B](h: SensitiveHandler[C, A, B])(body: Audited[C] ?=> A)(using fx: Effects): B =
   Audit.handle[C, A, B, RuntimeException](
     fx,
     new Audit.Handler[C, A, B]:
       def ret(a: A): B = h.ret(a)
-      def answer(op: C, k: Answer[Audited[C]]): Unit = op match
-        case o: (C & AuditedOp[C, x]) @unchecked => k.answer(o, h.answer(o))
+      def answer(op: C, k: Answer[Sensitive[C]]): Unit = op match
+        case o: (C & SensitiveOp[C, x]) @unchecked => k.answer(o, h.answer(o))
     ,
-    (vault: Audit.Vault[C]) => body(using vault)
+    (audited: Audited[C]) => body(using audited)
   )
 
-/** The body with C's capability, every operation of it through the interceptor `i` to the vault. */
-def audit[C, A](i: Interceptor[C, Audited[C]])(body: Effect[Audited[C]] ?=> A)(using vault: Audit.Vault[C]): A =
-  Audit.audit[C, A, RuntimeException](vault, toJava(i), (effect: Effect[Audited[C]]) => body(using effect))
+/** The body with C's capability, every operation of it through the interceptor `i` to the handler. */
+def audit[C, A](i: Interceptor[C, Sensitive[C]])(body: Effect[Sensitive[C]] ?=> A)(using audited: Audited[C]): A =
+  Audit.audit[C, A, RuntimeException](audited, toJava(i), (effect: Effect[Sensitive[C]]) => body(using effect))
 
 /** The body with an implementation whose every capability shows each operation to `observer` first. */
 def observe[A](observer: Observer)(body: Effects ?=> A)(using fx: Effects): A =

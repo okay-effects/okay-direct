@@ -1,24 +1,24 @@
 package okay.direct.scala2
 
-import okay.direct.{Audit, Audited, Effect, Effects, Observer}
+import okay.direct.{Audited, Effect, Effects, Observer, Sensitive}
 import okay.direct.loom.LoomEffects
 import okay.direct.threads.ThreadEffects
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import Control._
 
-/** A sensitive effect: its operations Audited.Ops. */
+/** A sensitive effect: its operations Sensitive.Ops. */
 sealed trait Pay
 
 object Pay {
-  final case class Transfer(to: String, amount: Int) extends Pay with AuditedOp[Pay, String]
-  final case class Balance() extends Pay with AuditedOp[Pay, Int]
+  final case class Transfer(to: String, amount: Int) extends Pay with SensitiveOp[Pay, String]
+  final case class Balance() extends Pay with SensitiveOp[Pay, Int]
 
-  def bank[A](balance: Int)(body: Audit.Vault[Pay] => A)(implicit fx: Effects): A = {
+  def bank[A](balance: Int)(body: Audited[Pay] => A)(implicit fx: Effects): A = {
     var left = balance
     handleSensitive(new SensitiveHandler[Pay, A, A] {
       def ret(a: A): A = a
-      def answer(op: Pay, k: Answer[Audited[Pay]]): Unit = op match {
+      def answer(op: Pay, k: Answer[Sensitive[Pay]]): Unit = op match {
         case t: Transfer => left -= t.amount; k(t, s"ok:${t.to}:${t.amount}")
         case b: Balance => k(b, left)
       }
@@ -28,9 +28,10 @@ object Pay {
   def masked(account: String): String = "****" + account.takeRight(4)
 
   /** The audit of payments: normalized, told masked, refused over the limit. */
-  def guarded(limit: Int)(implicit trail: Effect[Trail], fail: Effect[Throws[String]]): Interceptor[Pay, Audited[Pay]] =
-    new Interceptor[Pay, Audited[Pay]] {
-      def on(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
+  def guarded(limit: Int)
+      (implicit trail: Effect[Trail], fail: Effect[Throws[String]]): Interceptor[Pay, Sensitive[Pay]] =
+    new Interceptor[Pay, Sensitive[Pay]] {
+      def on(op: Pay, pass: Pass[Sensitive[Pay]], k: Answer[Sensitive[Pay]]): Unit = op match {
         case t: Transfer =>
           val to = t.to.trim.toUpperCase
           if (t.amount > limit) {
@@ -49,15 +50,15 @@ object Pay {
       }
     }
 
-  val passing: Interceptor[Pay, Audited[Pay]] = new Interceptor[Pay, Audited[Pay]] {
-    def on(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
+  val passing: Interceptor[Pay, Sensitive[Pay]] = new Interceptor[Pay, Sensitive[Pay]] {
+    def on(op: Pay, pass: Pass[Sensitive[Pay]], k: Answer[Sensitive[Pay]]): Unit = op match {
       case t: Transfer => k(t, pass(t))
       case b: Balance => k(b, pass(b))
     }
   }
 
   /** A program of payments: it knows nothing of the audit. */
-  def payments(pay: Effect[Audited[Pay]]): Int = {
+  def payments(pay: Effect[Sensitive[Pay]]): Int = {
     pay.perform(Transfer(" acct-1234 ", 100))
     val balance: Int = pay.perform(Balance())
     pay.perform(Transfer("acct-77", 5000))
@@ -92,7 +93,7 @@ abstract class ControlTck {
     implicit val fx: Effects = effects
     val result = Trail.keep { implicit trail =>
       Throws.run[String, Int] { implicit fail =>
-        bank(1000) { implicit vault => audit(guarded(1000))(payments) }
+        bank(1000) { implicit audited => audit(guarded(1000))(payments) }
       }
     }
     assertEquals((List(
@@ -116,7 +117,7 @@ abstract class ControlTck {
         Reader.run(5) { implicit reader =>
           State.run(1) { implicit state =>
             State.put(State.get[Int] + Reader.ask[Int])
-            bank(100) { implicit vault => audit(passing)(pay => pay.perform(Transfer("acct", State.get[Int]))) }
+            bank(100) { implicit audited => audit(passing)(pay => pay.perform(Transfer("acct", State.get[Int]))) }
           }
         }
       }(effects)
@@ -133,7 +134,7 @@ abstract class ControlTck {
         else seen.proceed()
     }
     val result = observe(readOnly) { implicit watched =>
-      try bank(100) { implicit vault => audit(passing)(pay => pay.perform(Balance()): Int) }
+      try bank(100) { implicit audited => audit(passing)(pay => pay.perform(Balance()): Int) }
       catch { case _: SecurityException => -1 }
     }(effects)
     assertEquals(-1, result)

@@ -254,24 +254,24 @@ Effect<State<Integer>> doubling = Interceptor.intercept(state, (op, pass, k) -> 
 ```
 
 **A sensitive effect** is performed only under an audit, and answered only by its own handler — a guarantee by types.
-Its operations are `Audited.Op`s, of the family `Audited<C>`:
+Its operations are `Sensitive.Op`s, of the family `Sensitive<C>`:
 
 ```java
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
-    record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
+    record Transfer(String to, int amount) implements Pay, Sensitive.Op<Pay, String, Transfer> {}
+    record Balance() implements Pay, Sensitive.Op<Pay, Integer, Balance> {}
 }
 ```
 
-- its handler is installed by `Audit.handle(fx, handler, body)`, whose body gets a `Vault<Pay>`: nothing can be
+- its handler is installed by `Audit.handle(fx, handler, body)`, whose body gets an `Audited<Pay>`: nothing can be
   performed through it;
-- `Audit.audit(vault, interceptor, body)` gives the body the capability, `Effect<Audited<Pay>>`, every operation through
-  the interceptor;
-- a handler of `Audited<Pay>` written by hand gets each operation as an `Audited<Pay>`, of no case and no answer type:
-  it can drop the rest, not answer it (a forged witness is refused).
+- `Audit.audit(audited, interceptor, body)` gives the body the capability, `Effect<Sensitive<Pay>>`, every operation
+  through the interceptor;
+- a handler of `Sensitive<Pay>` written by hand gets each operation as a `Sensitive<Pay>`, of no case and no answer
+  type: it can drop the rest, not answer it (a forged witness is refused).
 
 ```java
-Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
+Interceptor<Pay, Sensitive<Pay>> guarded = (op, pass, k) -> {
     switch (op) {
         case Pay.Transfer t when t.amount() > limit -> { Trail.record(trail, "refused");
             Throws.raise(fail, "refused"); }
@@ -285,11 +285,11 @@ Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
 };
 
 Trail.keep(fx, trail -> Throws.run(fx, String.class, fail ->
-    Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded, pay -> payments(pay)))));
+    Pay.bank(fx, 1000, audited -> Audit.audit(audited, guarded, pay -> payments(pay)))));
 ```
 
 `Pay.bank` is an ordinary handler of `Pay` (an `Audit.Handler`, a `switch` answering through `k`) installed by
-`Audit.handle`: the TCK's `Pay.java`. `payments` is a program over `Effect<Audited<Pay>>` that knows nothing of the
+`Audit.handle`: the TCK's `Pay.java`. `payments` is a program over `Effect<Sensitive<Pay>>` that knows nothing of the
 audit.
 
 **The observer** sees every operation of every effect, with its answer: `Observer.observe(fx, observer)` is an

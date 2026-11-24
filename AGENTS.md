@@ -83,26 +83,26 @@ Reader.run(21)(State.run(0)(Throws.run(program)))     // (1,Right(42))
 
 ### Control and audit
 
-A sensitive effect's operations are `Audited.Op`s. Its handler is installed by `Audit.handle`, whose body gets only a
-`Vault` (nothing can be performed through it); `Audit.audit(vault, interceptor, body)` gives the capability, every
-operation through the interceptor first. A hand-written handler of `Audited<Pay>` cannot answer them.
+A sensitive effect's operations are `Sensitive.Op`s. Its handler is installed by `Audit.handle`, whose body gets only an
+`Audited` (nothing can be performed through it); `Audit.audit(audited, interceptor, body)` gives the capability, every
+operation through the interceptor first. A hand-written handler of `Sensitive<Pay>` cannot answer them.
 
 ```java
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
+    record Transfer(String to, int amount) implements Pay, Sensitive.Op<Pay, String, Transfer> {}
 }
-static <A, E extends Exception> A bank(Effects fx, Audit.VaultBody<Pay, A, E> body) throws E {
+static <A, E extends Exception> A bank(Effects fx, Audit.AuditedBody<Pay, A, E> body) throws E {
     return Audit.handle(fx, new Audit.Handler<Pay, A, A>() {
         public A ret(A value) { return value; }
-        public void answer(Pay op, Answer<Audited<Pay>> k) {
+        public void answer(Pay op, Answer<Sensitive<Pay>> k) {
             switch (op) { case Pay.Transfer t -> k.answer(t, "sent " + t.amount() + " to " + t.to()); }
         }
     }, body);
 }
-static String checkout(Effect<Audited<Pay>> pay, int amount) { return pay.perform(new Pay.Transfer("shop", amount)); }
+static String checkout(Effect<Sensitive<Pay>> pay, int amount) { return pay.perform(new Pay.Transfer("shop", amount)); }
 
 Trail.keep(fx, trail -> Throws.run(fx, String.class, fail ->
-    bank(fx, vault -> Audit.audit(vault, (op, pass, k) -> {
+    bank(fx, audited -> Audit.audit(audited, (op, pass, k) -> {
         switch (op) {
             case Pay.Transfer t when t.amount() > 100 -> Throws.raise(fail, "refused: " + t.amount());
             case Pay.Transfer t -> { Trail.record(trail, "transfer " + t.amount()); k.answer(t, pass.pass(t)); }
@@ -124,7 +124,7 @@ Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on
 - Make the `Effects` implementation once, at the entry point. Programs install handlers (`State.run(fx, ...)`,
   `fx.handle(...)`) around their sub-bodies; they never construct an implementation or start a separate run of
   their own (no `new LoomEffects()`, no `Async.run(...).join()` inside a program).
-- Sensitive operations (payments, deletes, secrets, outbound calls) as `Audited.Op`s under `Audit.audit`; use
+- Sensitive operations (payments, deletes, secrets, outbound calls) as `Sensitive.Op`s under `Audit.audit`; use
   `Observer.observe` for a complete record of operations.
 - Tests swap handlers: an in-memory handler (a `Map`, `State`, `Clock.Virtual` for time) instead of mocks of a client.
 - No ambient effects in business code: no `Instant.now()`, `Random`, file/network IO, `System.getenv`, threads,

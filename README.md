@@ -43,7 +43,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 | `Later<F>`, `DetachedHandler`, `DetachedEffects` | a continuation that outlives its clause: resumed once, any time, from any thread; `start` gives a `CompletableFuture` |
 | `Implicit<F>` | a key, by `ScopedValue`, under which a capability is found instead of passed |
 | `Interceptor<C, F>` | control of one effect's operations at the `perform`: tell, pass on, change, refuse |
-| `Audited<C>`, `Audit` | sensitive effects: performed only under an audit, answered only by their own handler |
+| `Sensitive<C>`, `Audit` | sensitive effects: performed only under an audit, answered only by their own handler |
 | `Observer` | every operation of every effect, seen as data with its answer: tell, pass on, refuse |
 
 An effect is a sealed interface, its operations records; a handler is an exhaustive `switch`, and the operation is
@@ -238,19 +238,19 @@ reflect has returned, which a handler's continuation does not allow, so it is aw
 
 An interceptor stands between a capability and its handler: each operation comes to it first, at the `perform`.
 `Interceptor.intercept(state, i)` is the capability `state` intercepted. A SENSITIVE effect's operations are
-`Audited.Op`s: its handler is installed by `Audit.handle`, whose body gets a `Vault`, through which nothing can be
-performed; `Audit.audit(vault, interceptor, body)` gives the body the capability, every operation through the
-interceptor. So no sensitive operation is answered that did not pass an audit; a handler of `Audited<Pay>` written
+`Sensitive.Op`s: its handler is installed by `Audit.handle`, whose body gets an `Audited` place, through which nothing
+can be performed; `Audit.audit(audited, interceptor, body)` gives the body the capability, every operation through the
+interceptor. So no sensitive operation is answered that did not pass an audit; a handler of `Sensitive<Pay>` written
 by hand gets operations of no case and no answer type, and cannot answer them. `Observer.observe(fx, observer)` is an
 implementation whose every capability shows each operation to the observer, its own operations not shown to it.
 
 ```java
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
-    record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
+    record Transfer(String to, int amount) implements Pay, Sensitive.Op<Pay, String, Transfer> {}
+    record Balance() implements Pay, Sensitive.Op<Pay, Integer, Balance> {}
 }
 
-Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
+Interceptor<Pay, Sensitive<Pay>> guarded = (op, pass, k) -> {
     switch (op) {
         case Pay.Transfer t when t.amount() > limit -> Throws.raise(fail, "refused: " + t.amount());
         case Pay.Transfer t -> k.answer(t, pass.pass(new Pay.Transfer(t.to().trim(), t.amount())));
@@ -258,7 +258,7 @@ Interceptor<Pay, Audited<Pay>> guarded = (op, pass, k) -> {
     }
 };
 
-Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded, pay -> payments(pay)));
+Pay.bank(fx, 1000, audited -> Audit.audit(audited, guarded, pay -> payments(pay)));
 ```
 
 ## The contract
@@ -297,11 +297,11 @@ Control and audit in Scala 3: an interceptor's clause returns the answer, `X` kn
 
 ```scala
 enum Pay:
-  case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
-  case Balance() extends Pay, AuditedOp[Pay, Int]
+  case Transfer(to: String, amount: Int) extends Pay, SensitiveOp[Pay, String]
+  case Balance() extends Pay, SensitiveOp[Pay, Int]
 
-def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]) = new Interceptor[Pay, Audited[Pay]]:
-  def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]) = new Interceptor[Pay, Sensitive[Pay]]:
+  def on[X](op: Pay & Op[Sensitive[Pay], X], pass: Pass[Sensitive[Pay]]): X = op match
     case Pay.Transfer(to, amount) if amount > limit => Throws.raise(s"refused: $amount")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim, amount))
     case Pay.Balance() => pass(Pay.Balance())

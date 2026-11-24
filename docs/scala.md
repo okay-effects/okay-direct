@@ -87,11 +87,11 @@ Scala 3 (top level of `okay.direct.scala3`) — the interceptor's clause returns
 
 ```scala
 enum Pay:
-  case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
-  case Balance() extends Pay, AuditedOp[Pay, Int]
+  case Transfer(to: String, amount: Int) extends Pay, SensitiveOp[Pay, String]
+  case Balance() extends Pay, SensitiveOp[Pay, Int]
 
-def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]) = new Interceptor[Pay, Audited[Pay]]:
-  def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]) = new Interceptor[Pay, Sensitive[Pay]]:
+  def on[X](op: Pay & Op[Sensitive[Pay], X], pass: Pass[Sensitive[Pay]]): X = op match
     case Pay.Transfer(to, amount) if amount > limit => Trail.record(s"refused: $amount"); Throws.raise("refused")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim.toUpperCase, amount))
     case Pay.Balance() => pass(Pay.Balance())
@@ -101,8 +101,9 @@ observe(telling)(Reader.run(5)(State.run(1)(program)))     // every operation, t
 ```
 
 `intercept(i)(body)` intercepts the capability in scope; `handleSensitive(h)(body)` installs a sensitive effect's
-handler, its vault in scope; `audit(i)(body)` gives the body the audited capability; `observe(o)(body)` runs the body on
-the watched implementation, a context parameter. Scala 2 has the same in `Control._`, the clauses answering through `k`.
+handler, its `Audited` place in scope; `audit(i)(body)` gives the body the capability; `observe(o)(body)` runs the
+body on the observed implementation, a context parameter. Scala 2 has the same in `Control._`, the clauses answering
+through `k`.
 
 ## Delimited continuations and monadic reflection
 

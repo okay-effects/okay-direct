@@ -20,8 +20,8 @@ package object scala2 {
     * every Java library of the family, its `Self` the effect itself. */
   type Op[F, X] = okay.effect.Op[F, X, F]
 
-  /** An operation of the sensitive effect `C`, answered by an `X` (okay-direct's `Audited.Op`). */
-  type AuditedOp[C, X] = okay.direct.Audited.Op[C, X, okay.direct.Audited[C]]
+  /** An operation of the sensitive effect `C`, answered by an `X` (okay-direct's `Sensitive.Op`). */
+  type SensitiveOp[C, X] = okay.direct.Sensitive.Op[C, X, okay.direct.Sensitive[C]]
 
   /** The capability of asynchrony and structured concurrency: okay-direct's `std.Async`, see [[Async$]]. */
   type Async = okay.direct.std.Async

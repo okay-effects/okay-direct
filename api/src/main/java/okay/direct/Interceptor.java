@@ -11,7 +11,7 @@ import okay.effect.Op;
  * <li>refuse: not pass it on, and throw, or fail through an effect of its own, {@code Throws.raise}.</li>
  * </ul>
  * It answers through {@code k}, exactly once, the operation the witness of the answer's type, unless it refuses.
- * For a plain effect {@code C} and {@code F} are the same; for a sensitive one {@code F} is {@code Audited<C>}.
+ * For a plain effect {@code C} and {@code F} are the same; for a sensitive one {@code F} is {@code Sensitive<C>}.
  */
 @FunctionalInterface
 public interface Interceptor<C, F> {

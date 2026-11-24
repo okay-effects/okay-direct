@@ -2,10 +2,11 @@ package okay.direct;
 
 /**
  * SENSITIVE EFFECTS, performed only under an audit. The handler of a sensitive effect is installed by
- * {@link #handle}, which gives its body not a capability but a {@link Vault}: nothing can be performed through it.
- * {@link #audit} takes the vault and an interceptor, and gives its body the capability, {@code Effect<Audited<C>>},
- * every operation through the interceptor first. So every sensitive operation answered has passed an audit: a
- * program cannot perform it otherwise, nor a handler written by hand answer it (see {@link Audited}).
+ * {@link #handle}, which gives its body not a capability but an {@link Audited} place: nothing can be performed
+ * through it. {@link #audit} takes it and an interceptor, and gives its body the capability,
+ * {@code Effect<Sensitive<C>>}, every operation through the interceptor first. So every sensitive operation
+ * answered has passed an audit: a program cannot perform it otherwise, nor a handler written by hand answer it (see
+ * {@link Sensitive}).
  */
 public final class Audit {
     private Audit() {}
@@ -14,45 +15,36 @@ public final class Audit {
     public interface Handler<C, A, B> {
         B ret(A value);
 
-        void answer(C op, Answer<Audited<C>> k);
+        void answer(C op, Answer<Sensitive<C>> k);
     }
 
-    /** The handler of a sensitive effect, as it is given to its body: only {@link #audit} performs through it. */
-    public static final class Vault<C> {
-        private final Effect<Audited<C>> effect;
-
-        private Vault(Effect<Audited<C>> effect) {
-            this.effect = effect;
-        }
-    }
-
-    /** A body under the handler of a sensitive effect. */
+    /** A body under the handler of a sensitive effect: it gets the audited place. */
     @FunctionalInterface
-    public interface VaultBody<C, A, E extends Exception> {
-        A run(Vault<C> vault) throws E;
+    public interface AuditedBody<C, A, E extends Exception> {
+        A run(Audited<C> audited) throws E;
     }
 
-    /** The sensitive effect C handled by {@code handler}; the body gets its vault. */
+    /** The sensitive effect C handled by {@code handler}; the body gets its audited place. */
     public static <C, A, B, E extends Exception> B handle(Effects effects, Handler<C, A, B> handler,
-            VaultBody<C, A, E> body) throws E {
-        return effects.handle(new InPlace<Audited<C>, A, B>() {
+            AuditedBody<C, A, E> body) throws E {
+        return effects.handle(new InPlace<Sensitive<C>, A, B>() {
             @Override
             public B ret(A value) {
                 return handler.ret(value);
             }
 
             @Override
-            @SuppressWarnings("unchecked") // an operation of Audited<C> is one of the cases C (see Audited)
-            public void answer(Audited<C> op, Answer<Audited<C>> k) {
+            @SuppressWarnings("unchecked") // an operation of Sensitive<C> is one of the cases C (see Sensitive)
+            public void answer(Sensitive<C> op, Answer<Sensitive<C>> k) {
                 handler.answer((C) (Object) op, k);
             }
-        }, (Effect<Audited<C>> effect) -> body.run(new Vault<>(effect)));
+        }, (Effect<Sensitive<C>> effect) -> body.run(new Audited<>(effect)));
     }
 
-    /** The body, its capability of C every operation of which goes through {@code interceptor} to the vault. */
-    public static <C, A, E extends Exception> A audit(Vault<C> vault, Interceptor<C, Audited<C>> interceptor,
-            Body<Audited<C>, A, E> body) throws E {
-        var guarded = new Intercepted<>(vault.effect, interceptor);
+    /** The body, its capability of C every operation of which goes through {@code interceptor} to the handler. */
+    public static <C, A, E extends Exception> A audit(Audited<C> audited, Interceptor<C, Sensitive<C>> interceptor,
+            Body<Sensitive<C>, A, E> body) throws E {
+        var guarded = new Intercepted<>(audited.effect, interceptor);
         try {
             return body.run(guarded);
         } finally {

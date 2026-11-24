@@ -2,16 +2,16 @@ package okay.direct.tck;
 
 import okay.direct.Answer;
 import okay.direct.Audit;
-import okay.direct.Audited;
+import okay.direct.Sensitive;
 import okay.direct.Effects;
 
-/** A sensitive effect: its operations Audited.Ops, so performed only under an audit. */
+/** A sensitive effect: its operations Sensitive.Ops, so performed only under an audit. */
 sealed interface Pay {
-    record Transfer(String to, int amount) implements Pay, Audited.Op<Pay, String, Transfer> {}
-    record Balance() implements Pay, Audited.Op<Pay, Integer, Balance> {}
+    record Transfer(String to, int amount) implements Pay, Sensitive.Op<Pay, String, Transfer> {}
+    record Balance() implements Pay, Sensitive.Op<Pay, Integer, Balance> {}
 
     /** A bank with {@code balance}: an ordinary handler of Pay, installed by Audit.handle. */
-    static <A, E extends Exception> A bank(Effects effects, int balance, Audit.VaultBody<Pay, A, E> body) throws E {
+    static <A, E extends Exception> A bank(Effects effects, int balance, Audit.AuditedBody<Pay, A, E> body) throws E {
         return Audit.handle(effects, new Audit.Handler<Pay, A, A>() {
             private int left = balance;
 
@@ -21,7 +21,7 @@ sealed interface Pay {
             }
 
             @Override
-            public void answer(Pay op, Answer<Audited<Pay>> k) {
+            public void answer(Pay op, Answer<Sensitive<Pay>> k) {
                 switch (op) {
                     case Transfer transfer -> {
                         left -= transfer.amount();

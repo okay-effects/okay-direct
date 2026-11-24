@@ -1,21 +1,21 @@
 package okay.direct.scala3
 
-import okay.direct.{Audit, Audited, Effect, Effects, Observer}
+import okay.direct.{Audited, Effect, Effects, Observer, Sensitive}
 import okay.direct.loom.LoomEffects
 import okay.direct.threads.ThreadEffects
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-/** A sensitive effect: its operations Audited.Ops. */
+/** A sensitive effect: its operations Sensitive.Ops. */
 enum Pay:
-  case Transfer(to: String, amount: Int) extends Pay, AuditedOp[Pay, String]
-  case Balance() extends Pay, AuditedOp[Pay, Int]
+  case Transfer(to: String, amount: Int) extends Pay, SensitiveOp[Pay, String]
+  case Balance() extends Pay, SensitiveOp[Pay, Int]
 
-def bank[A](balance: Int)(body: Audit.Vault[Pay] ?=> A)(using Effects): A =
+def bank[A](balance: Int)(body: Audited[Pay] ?=> A)(using Effects): A =
   var left = balance
   handleSensitive(new SensitiveHandler[Pay, A, A]:
     def ret(a: A) = a
-    def answer[X](op: Pay & AuditedOp[Pay, X]): X = op match
+    def answer[X](op: Pay & SensitiveOp[Pay, X]): X = op match
       case Pay.Transfer(to, amount) => left -= amount; s"ok:$to:$amount"
       case Pay.Balance() => left
   )(body)
@@ -23,9 +23,9 @@ def bank[A](balance: Int)(body: Audit.Vault[Pay] ?=> A)(using Effects): A =
 def masked(account: String): String = "****" + account.takeRight(4)
 
 /** The audit of payments: normalized, told masked, refused over the limit. */
-def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]): Interceptor[Pay, Audited[Pay]] =
-  new Interceptor[Pay, Audited[Pay]]:
-    def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]): Interceptor[Pay, Sensitive[Pay]] =
+  new Interceptor[Pay, Sensitive[Pay]]:
+    def on[X](op: Pay & Op[Sensitive[Pay], X], pass: Pass[Sensitive[Pay]]): X = op match
       case Pay.Transfer(to0, amount) =>
         val to = to0.trim.toUpperCase
         if amount > limit then
@@ -41,11 +41,11 @@ def guarded(limit: Int)(using Effect[Trail], Effect[Throws[String]]): Intercepto
         Trail.record(s"balance → $b")
         b
 
-val passing: Interceptor[Pay, Audited[Pay]] = new Interceptor[Pay, Audited[Pay]]:
-  def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = pass(op)
+val passing: Interceptor[Pay, Sensitive[Pay]] = new Interceptor[Pay, Sensitive[Pay]]:
+  def on[X](op: Pay & Op[Sensitive[Pay], X], pass: Pass[Sensitive[Pay]]): X = pass(op)
 
 /** A program of payments: it knows nothing of the audit. */
-def payments(using pay: Effect[Audited[Pay]]): Int =
+def payments(using pay: Effect[Sensitive[Pay]]): Int =
   pay.perform(Pay.Transfer(" acct-1234 ", 100))
   val balance = pay.perform(Pay.Balance())
   pay.perform(Pay.Transfer("acct-77", 5000))
@@ -88,7 +88,7 @@ abstract class ControlTck:
         Reader.run(5):
           State.run(1):
             State.put(State.get[Int] + Reader.ask[Int])
-            bank(100)(audit(passing)(summon[Effect[Audited[Pay]]].perform(Pay.Transfer("acct", State.get[Int]))))
+            bank(100)(audit(passing)(summon[Effect[Sensitive[Pay]]].perform(Pay.Transfer("acct", State.get[Int]))))
     assertEquals(List("State Get()", "  → 1", "Reader Ask()", "  → 5", "State Put(6)", "  → ()",
       "State Get()", "  → 6", "Pay Transfer(acct,6)", "  → ok:acct:6"), result._1)
     assertEquals((6, "ok:acct:6"), result._2)
@@ -99,7 +99,7 @@ abstract class ControlTck:
         if seen.effect == "Pay" then throw SecurityException(s"read-only: ${seen.op} refused")
         seen.proceed()
     val result = observe(readOnly):
-      try bank(100)(audit(passing)(summon[Effect[Audited[Pay]]].perform(Pay.Balance())))
+      try bank(100)(audit(passing)(summon[Effect[Sensitive[Pay]]].perform(Pay.Balance())))
       catch case e: SecurityException => -1
     assertEquals(-1, result)
 

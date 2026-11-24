@@ -135,11 +135,11 @@ is copied with the branch.
 
 okay-core's interceptors ([its docs](../../okay-core/docs/intercept.md)) are handlers inserted in a row, the guarantee
 for a sensitive effect an opaque type in the row. With capabilities an interceptor is a WRAPPER of a capability, its
-clause run at the `perform`; the guarantee is that a sensitive effect's operations are of the family `Audited<C>`,
+clause run at the `perform`; the guarantee is that a sensitive effect's operations are of the family `Sensitive<C>`,
 performed through a capability only `Audit.audit` makes, and answered by the handler only `Audit.handle` installs —
-whose body gets a `Vault`, not a capability. `Audited` must be an interface the operations implement: javac's bridge
-method casts a clause's argument to the erased family, and a class would fail it. The observer is an `Effects` that
-wraps every capability its handlers hand out.
+whose body gets an `Audited` place, not a capability. `Sensitive` must be an interface the operations implement:
+javac's bridge method casts a clause's argument to the erased family, and a class would fail it. The observer is an
+`Effects` that wraps every capability its handlers hand out.
 
 ## What the tests found
 
@@ -147,7 +147,7 @@ wraps every capability its handlers hand out.
 |---|---|---|
 | a body's handler swallowed the unwinding of an outer handler's dropped rest | the audit's refusal through `Throws`, under a bank | `Abandoned` knows its owner |
 | an in-place clause that threw left the body waiting | a refusal from an in-place handler | the body unwound |
-| `Audited` as a class broke on javac's bridge cast | the audit tests | an interface the operations implement |
+| the mark of a sensitive family (then `Audited`) as a class broke on javac's bridge cast | the audit tests | an interface the operations implement |
 | scoped values leaked between a body and its clause on Loom | `Implicit`'s clause test | the bindings switched with the stack |
 | on Espresso, a continuation's bottom frame pointed at the original | the first multi-shot copy | the frames patched to the copy |
 | on Espresso, a nested choice's rest kept to be copied pointed at a handling the branch had copied | choices in choices | the chain cut by key |

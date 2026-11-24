@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import okay.direct.Answer;
 import okay.direct.Audit;
-import okay.direct.Audited;
+import okay.direct.Sensitive;
 import okay.direct.Effect;
 import okay.direct.Effects;
 import okay.direct.Interceptor;
@@ -30,7 +30,7 @@ interface InterceptorTests {
     }
 
     /** A program of payments: it knows nothing of the audit it runs under. */
-    static int payments(Effect<Audited<Pay>> pay) {
+    static int payments(Effect<Sensitive<Pay>> pay) {
         pay.perform(new Pay.Transfer(" acct-1234 ", 100));
         int balance = pay.perform(new Pay.Balance());
         pay.perform(new Pay.Transfer("acct-77", 5000));
@@ -38,7 +38,7 @@ interface InterceptorTests {
     }
 
     /** The audit of payments: the account normalized, a limit, the trail masked, a refusal raised. */
-    static Interceptor<Pay, Audited<Pay>> guarded(int limit, Effect<Trail> trail, Effect<Throws<String>> fail) {
+    static Interceptor<Pay, Sensitive<Pay>> guarded(int limit, Effect<Trail> trail, Effect<Throws<String>> fail) {
         return (op, pass, k) -> {
             switch (op) {
                 case Pay.Transfer transfer -> {
@@ -62,7 +62,7 @@ interface InterceptorTests {
         };
     }
 
-    static Interceptor<Pay, Audited<Pay>> passing() {
+    static Interceptor<Pay, Sensitive<Pay>> passing() {
         return (op, pass, k) -> {
             switch (op) {
                 case Pay.Transfer transfer -> k.answer(transfer, pass.pass(transfer));
@@ -94,7 +94,8 @@ interface InterceptorTests {
     default void theAuditOfASensitiveEffectNormalizesTellsAndRefuses() {
         var fx = effects();
         var result = Trail.keep(fx, trail -> Throws.<String, Integer, RuntimeException>run(fx,
-            fail -> Pay.bank(fx, 1000, vault -> Audit.audit(vault, guarded(1000, trail, fail), InterceptorTests::payments))));
+            fail -> Pay.bank(fx, 1000, audited -> 
+                Audit.audit(audited, guarded(1000, trail, fail), InterceptorTests::payments))));
         assertEquals(new Trail.Kept<>(List.of(
             "transfer 100 to ****1234 → ok:ACCT-1234:100",
             "balance → 900",
@@ -105,15 +106,15 @@ interface InterceptorTests {
     @Test
     default void aHandlerOfASensitiveEffectWrittenByHandCannotAnswer() {
         var fx = effects();
-        assertThrows(IllegalArgumentException.class, () -> fx.handle(new InPlace<Audited<Pay>, String, String>() {
+        assertThrows(IllegalArgumentException.class, () -> fx.handle(new InPlace<Sensitive<Pay>, String, String>() {
             @Override
             public String ret(String value) {
                 return value;
             }
 
             @Override
-            public void answer(Audited<Pay> op, Answer<Audited<Pay>> k) {
-                // the operation is an Audited<Pay>: no case, no answer's type; a forged witness is refused
+            public void answer(Sensitive<Pay> op, Answer<Sensitive<Pay>> k) {
+                // the operation is an Sensitive<Pay>: no case, no answer's type; a forged witness is refused
                 k.answer(new Pay.Transfer("forged", 0), "forged");
             }
         }, pay -> pay.perform(new Pay.Transfer("acct", 1))));
@@ -122,8 +123,8 @@ interface InterceptorTests {
     @Test
     default void anAuditedCapabilityDoesNotOutliveItsAudit() {
         var fx = effects();
-        var escaped = new AtomicReference<Effect<Audited<Pay>>>();
-        Pay.bank(fx, 10, vault -> Audit.audit(vault, passing(), pay -> {
+        var escaped = new AtomicReference<Effect<Sensitive<Pay>>>();
+        Pay.bank(fx, 10, audited -> Audit.audit(audited, passing(), pay -> {
             escaped.set(pay);
             return 0;
         }));
@@ -145,7 +146,7 @@ interface InterceptorTests {
             });
             return Reader.run(watched, 5, reader -> State.run(watched, 1, state -> {
                 State.put(state, State.get(state) + Reader.ask(reader));
-                return Pay.bank(watched, 100, vault -> Audit.audit(vault, passing(),
+                return Pay.bank(watched, 100, audited -> Audit.audit(audited, passing(),
                     pay -> pay.perform(new Pay.Transfer("acct", State.get(state)))));
             }));
         });
@@ -173,7 +174,8 @@ interface InterceptorTests {
             return Trail.keep(watched, inner -> {
                 Trail.record(inner, "start");
                 try {
-                    return Pay.bank(watched, 100, vault -> Audit.audit(vault, passing(), pay -> pay.perform(new Pay.Balance())));
+                    return Pay.bank(watched, 100, 
+                        audited -> Audit.audit(audited, passing(), pay -> pay.perform(new Pay.Balance())));
                 } catch (SecurityException e) {
                     return -1;
                 }
