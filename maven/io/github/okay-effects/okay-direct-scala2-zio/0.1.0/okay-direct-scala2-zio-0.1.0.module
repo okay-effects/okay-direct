@@ -50,11 +50,11 @@
         {
           "name": "okay-direct-scala2-zio-0.1.0.jar",
           "url": "okay-direct-scala2-zio-0.1.0.jar",
-          "size": 28121,
-          "sha512": "d8363cceff11a0018f21d68e315374c3b540eb83527d873609c8ee5b6ec19010400b27c4b8898f9ec21cdd3caaf9af30806409c54845ead4754241227962f3dd",
-          "sha256": "f5e0d25411a81b1d58bde8fe4bb1c53194eaad6db80f609f11eee8cf9eb90490",
-          "sha1": "b97aafda2e5e5c574b9a290d2e9ece3021a14b71",
-          "md5": "f7033749f30f16aaceb2c0014c013037"
+          "size": 28064,
+          "sha512": "de9aa31355ae1c4b071515818d557ec69c05bc03b90dacf1d93f8613b9350f13c7fad54741898d3f9e35479577a7846e751c7e4e4cd1eada0151cb8735dbf37c",
+          "sha256": "095eccba8e97653326fe1c1abc1a5724959a16aa0eb9dc300c8aaea520cb26e8",
+          "sha1": "b97bf8ccc0973398994d04b056a20dc87219c147",
+          "md5": "fbf91ff81691af389d6ce355d0b187d9"
         }
       ]
     },
@@ -94,11 +94,11 @@
         {
           "name": "okay-direct-scala2-zio-0.1.0.jar",
           "url": "okay-direct-scala2-zio-0.1.0.jar",
-          "size": 28121,
-          "sha512": "d8363cceff11a0018f21d68e315374c3b540eb83527d873609c8ee5b6ec19010400b27c4b8898f9ec21cdd3caaf9af30806409c54845ead4754241227962f3dd",
-          "sha256": "f5e0d25411a81b1d58bde8fe4bb1c53194eaad6db80f609f11eee8cf9eb90490",
-          "sha1": "b97aafda2e5e5c574b9a290d2e9ece3021a14b71",
-          "md5": "f7033749f30f16aaceb2c0014c013037"
+          "size": 28064,
+          "sha512": "de9aa31355ae1c4b071515818d557ec69c05bc03b90dacf1d93f8613b9350f13c7fad54741898d3f9e35479577a7846e751c7e4e4cd1eada0151cb8735dbf37c",
+          "sha256": "095eccba8e97653326fe1c1abc1a5724959a16aa0eb9dc300c8aaea520cb26e8",
+          "sha1": "b97bf8ccc0973398994d04b056a20dc87219c147",
+          "md5": "fbf91ff81691af389d6ce355d0b187d9"
         }
       ]
     },
@@ -114,11 +114,11 @@
         {
           "name": "okay-direct-scala2-zio-0.1.0-sources.jar",
           "url": "okay-direct-scala2-zio-0.1.0-sources.jar",
-          "size": 3034,
-          "sha512": "b4f299fe261dcd11216b19d0e857f1a5ba3f4748fd5bc256664209e38b3041ae0ecab839cdf6aa5e3a2cd5f4349ce2d691e6f741764ef0b858e65f17e9dc216b",
-          "sha256": "85c602f4ec2aab0596245118a183c4acd6a7001a2d4c29998b7fc9e31e0d6b57",
-          "sha1": "1b5211c9f6450d053210829df2410487ecb3461b",
-          "md5": "689120ed3cb899f6e1e25339d5da0a85"
+          "size": 3037,
+          "sha512": "a515f1992d7126c970c7d5ac9326a56d68fdda2a24331319953c2a1cdeb606cd8d423c52d820ba69b48899337597b7f91ab12bd2e0c7d4729719f5c610e3245c",
+          "sha256": "1744772d8898ad200b7394cb71f69f695d72825376cfa323f7660db46db72a78",
+          "sha1": "b057fe44bf3797351dc38a5312cf48fdee640216",
+          "md5": "0a4265abbaabf5668bd7d16da44a0313"
         }
       ]
     }

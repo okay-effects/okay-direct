@@ -36,11 +36,11 @@
         {
           "name": "okay-direct-loom-0.1.0.jar",
           "url": "okay-direct-loom-0.1.0.jar",
-          "size": 12641,
-          "sha512": "9f58a9be60b8441793508171c1ba4d57b8fc260a89f18778ca71b20a2424c148044d46b0e06aced03d37492aa6693f15d13446bede71b638c3b4f051aed13019",
-          "sha256": "60c107f104023222fffbedd693f75540ccacfe6df56a116b07e411a6686ebdb9",
-          "sha1": "4c147cf9bfec4b7167da23f757c4c0be1157a1d7",
-          "md5": "c94b68105140ac20eac91693fe257247"
+          "size": 12569,
+          "sha512": "3f85f0d36ceba8bdcb61cba907372f52c149f85e32b9ef8c4139cabd3d898db99c30fc3993e0a0d4de7323eb876a74c206145f6eee5c6a7091ef4e19dab9c8bf",
+          "sha256": "7217f956497faa0906d4eab989d94c7ca3e4f3760b9e3afd34489e5768eb67e6",
+          "sha1": "59b01aea21fe2c5a16706b3999f70629bb5c7390",
+          "md5": "025d6d8827e553cc669cee19d82b6700"
         }
       ]
     },
@@ -66,11 +66,11 @@
         {
           "name": "okay-direct-loom-0.1.0.jar",
           "url": "okay-direct-loom-0.1.0.jar",
-          "size": 12641,
-          "sha512": "9f58a9be60b8441793508171c1ba4d57b8fc260a89f18778ca71b20a2424c148044d46b0e06aced03d37492aa6693f15d13446bede71b638c3b4f051aed13019",
-          "sha256": "60c107f104023222fffbedd693f75540ccacfe6df56a116b07e411a6686ebdb9",
-          "sha1": "4c147cf9bfec4b7167da23f757c4c0be1157a1d7",
-          "md5": "c94b68105140ac20eac91693fe257247"
+          "size": 12569,
+          "sha512": "3f85f0d36ceba8bdcb61cba907372f52c149f85e32b9ef8c4139cabd3d898db99c30fc3993e0a0d4de7323eb876a74c206145f6eee5c6a7091ef4e19dab9c8bf",
+          "sha256": "7217f956497faa0906d4eab989d94c7ca3e4f3760b9e3afd34489e5768eb67e6",
+          "sha1": "59b01aea21fe2c5a16706b3999f70629bb5c7390",
+          "md5": "025d6d8827e553cc669cee19d82b6700"
         }
       ]
     },
@@ -86,11 +86,11 @@
         {
           "name": "okay-direct-loom-0.1.0-sources.jar",
           "url": "okay-direct-loom-0.1.0-sources.jar",
-          "size": 5067,
-          "sha512": "be597883def5a2aa023fb473f11b983ba2dc459efeea305526e6d16fc3f241a1cb49a2d17fa0692b5f9de8acd59771a36bb58c4a7d6f0ef42c6c206e10db6895",
-          "sha256": "c7311d8f8e4d2677ca50a1a46e367a446b1b873eecb63cc6463000c3e3264e26",
-          "sha1": "71eac8aa6b6f995f0c3fba03b7c6e27a763b7555",
-          "md5": "6eecb2be5a570722d2a9d825a2abe445"
+          "size": 5090,
+          "sha512": "3497ee2a904e1c5dc1a52f70bcbcccc399e8214f9b9af835f5f587bc6290177608b87727fba007fd81b42a525d807c34f2cdd02c33153ad133c031e36ceb03be",
+          "sha256": "12289aacd83ceeaa4f0c46bd9092fc3761547dc1fab27163577169dc08c90c1a",
+          "sha1": "8516e09f83c0561c5956697ab4f3647d97a54448",
+          "md5": "3778343b28b699a87b220f41dd9d9370"
         }
       ]
     }

@@ -30,4 +30,12 @@
     <connection>scm:git:https://github.com/okay-effects/okay-direct.git</connection>
     <url>https://github.com/okay-effects/okay-direct</url>
   </scm>
+  <dependencies>
+    <dependency>
+      <groupId>io.github.okay-effects</groupId>
+      <artifactId>okay-java-api</artifactId>
+      <version>0.1.0</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
 </project>

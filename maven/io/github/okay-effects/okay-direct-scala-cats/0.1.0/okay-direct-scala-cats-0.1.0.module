@@ -50,11 +50,11 @@
         {
           "name": "okay-direct-scala-cats-0.1.0.jar",
           "url": "okay-direct-scala-cats-0.1.0.jar",
-          "size": 38730,
-          "sha512": "14d864af744fc14e24a9f310cec33f5feba7ecee3cf60011f36b07a7e81da02b56ce61ec3b57c98d292e2785ecf8f4688e4e1bbc2282a97ee7148d598784b8aa",
-          "sha256": "37b2cb2f60a2c952604b73ce3a35a38fe24bd9155d16b485d06dd42f6a7e05c8",
-          "sha1": "52fd4e20a8351e28cd4d29c17c785eaecf51e5af",
-          "md5": "541764d753574de6bfd8de999c965bba"
+          "size": 38739,
+          "sha512": "c549ca950fcfafb8d72064375e4b870bd8ca941e760e1985e4f94aa957148da994171ee802b62041aba320398a7abd35b57258566b725f8bcb0e491944f98190",
+          "sha256": "073cd3f95f28c12c2cdb60b3d4b8f430d0eea8a5165baf98ffc29641ad4826d4",
+          "sha1": "7ed18f700ab6c044e2f047c56fb3a1b67a9b1ad4",
+          "md5": "2ee74cd2883bdc3191367953b43b33b1"
         }
       ]
     },
@@ -94,11 +94,11 @@
         {
           "name": "okay-direct-scala-cats-0.1.0.jar",
           "url": "okay-direct-scala-cats-0.1.0.jar",
-          "size": 38730,
-          "sha512": "14d864af744fc14e24a9f310cec33f5feba7ecee3cf60011f36b07a7e81da02b56ce61ec3b57c98d292e2785ecf8f4688e4e1bbc2282a97ee7148d598784b8aa",
-          "sha256": "37b2cb2f60a2c952604b73ce3a35a38fe24bd9155d16b485d06dd42f6a7e05c8",
-          "sha1": "52fd4e20a8351e28cd4d29c17c785eaecf51e5af",
-          "md5": "541764d753574de6bfd8de999c965bba"
+          "size": 38739,
+          "sha512": "c549ca950fcfafb8d72064375e4b870bd8ca941e760e1985e4f94aa957148da994171ee802b62041aba320398a7abd35b57258566b725f8bcb0e491944f98190",
+          "sha256": "073cd3f95f28c12c2cdb60b3d4b8f430d0eea8a5165baf98ffc29641ad4826d4",
+          "sha1": "7ed18f700ab6c044e2f047c56fb3a1b67a9b1ad4",
+          "md5": "2ee74cd2883bdc3191367953b43b33b1"
         }
       ]
     },
@@ -115,10 +115,10 @@
           "name": "okay-direct-scala-cats-0.1.0-sources.jar",
           "url": "okay-direct-scala-cats-0.1.0-sources.jar",
           "size": 2883,
-          "sha512": "034597f12213c6088b057f61b8d3380b099342a8df69633169313ee14a54e9a492f0f02dc4011d6aaae242a17030addce72c243c2df464e8337193b8935bf9bd",
-          "sha256": "f89dc83941d64ba3fb76e3c931d13c98f97578e6ce221d9a1da3715413c6a773",
-          "sha1": "f2157edfb25de92bc476b02ebf44a0ae56688434",
-          "md5": "e68301b4f842090b61f79ed26a772a7b"
+          "sha512": "33382a2cf18c24bbf7257b7ff6b198aff7169d910093a124ca6ef3c458f17c23e4c4462cc3ee7f4e30ab085bf966c485597884107ec5e932847e7f28fcea595b",
+          "sha256": "b2ca44169def4ed8a7633ef44f9d0b8a71d23781dfde21bcdfa52a821cfc22d7",
+          "sha1": "2124454c753495fe502312e114b66f345146a223",
+          "md5": "7201798886bbe7c2deef004d2b0f09e1"
         }
       ]
     }

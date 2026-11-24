@@ -51,11 +51,11 @@
         {
           "name": "okay-direct-tck-0.1.0.jar",
           "url": "okay-direct-tck-0.1.0.jar",
-          "size": 73309,
-          "sha512": "8a6ac79001e6ed0482d835d1aeead9372033f603d62fbb0b9318ede9def0f4f8ca4a75d2882f9863f1989a2050d7c618111eaee42627953f8cd46308943e2c3b",
-          "sha256": "3667c51d482dad56f71e11abe95dc685534acd09b0fcd261b8b2693aad02ec65",
-          "sha1": "d4e5f9dabac71e0bcd30d1895d971dcf4acd2d4d",
-          "md5": "c2e5abd3bb6fd6de99bed917c416b8cf"
+          "size": 83532,
+          "sha512": "b1810874e8b464af027eb34da26a53c0da54dc5480700a983601d7fe7968d9329144b9dc8370d3842169f1f89e4ae4ca62a2d4c1de379c4556fdb824038678a4",
+          "sha256": "9b9666b908e7a649abad7668c1709d2d94311eea211ab9ad7818e37036e60799",
+          "sha1": "9af4b7730b01922b2c2095d126f964807061ce7e",
+          "md5": "4b50661386e1bf98db48a2f0c3f572f3"
         }
       ]
     },
@@ -96,11 +96,11 @@
         {
           "name": "okay-direct-tck-0.1.0.jar",
           "url": "okay-direct-tck-0.1.0.jar",
-          "size": 73309,
-          "sha512": "8a6ac79001e6ed0482d835d1aeead9372033f603d62fbb0b9318ede9def0f4f8ca4a75d2882f9863f1989a2050d7c618111eaee42627953f8cd46308943e2c3b",
-          "sha256": "3667c51d482dad56f71e11abe95dc685534acd09b0fcd261b8b2693aad02ec65",
-          "sha1": "d4e5f9dabac71e0bcd30d1895d971dcf4acd2d4d",
-          "md5": "c2e5abd3bb6fd6de99bed917c416b8cf"
+          "size": 83532,
+          "sha512": "b1810874e8b464af027eb34da26a53c0da54dc5480700a983601d7fe7968d9329144b9dc8370d3842169f1f89e4ae4ca62a2d4c1de379c4556fdb824038678a4",
+          "sha256": "9b9666b908e7a649abad7668c1709d2d94311eea211ab9ad7818e37036e60799",
+          "sha1": "9af4b7730b01922b2c2095d126f964807061ce7e",
+          "md5": "4b50661386e1bf98db48a2f0c3f572f3"
         }
       ]
     },
@@ -116,11 +116,11 @@
         {
           "name": "okay-direct-tck-0.1.0-sources.jar",
           "url": "okay-direct-tck-0.1.0-sources.jar",
-          "size": 17747,
-          "sha512": "c91345c3486e13eaa6f0d085554eda287db28d1beb67f761fdef3dff8642bada8bee56e0e7f0157234fe3a39089bbcd7ae5c7930e745787ac0b6ab1de0118e4d",
-          "sha256": "60850dc77d3533b1e89e79f6fd5e6a3940a14c1f3795fe57c71dd50c285fb121",
-          "sha1": "93971d0286e1b7852351ffb548509d03764da689",
-          "md5": "5aa2de3ad6c48487bcb11460ec6cc942"
+          "size": 20356,
+          "sha512": "15a875212f51a9e25fd61f14d112079619cdd2935ae24b27088242c613e83c8235ff2a8b75477071d8c047105afad40c1e6d12418a23572a0d8e518a6d90185e",
+          "sha256": "9772e7c763f55ef1507e6e7b700f5b99cb1d0370ab24b48506c072a40e402e93",
+          "sha1": "14ad2705cb3226583663778cd26e5760dc81dd43",
+          "md5": "d46fe9bf7a5ecdb0885932f2f05a1540"
         }
       ]
     }
