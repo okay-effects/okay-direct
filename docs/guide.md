@@ -207,7 +207,7 @@ Fx.run(fx, Reader.run(10, State.run(0, Shop::step)));      // Final[state=10, va
 | `Throws<E>` | `raise` (answered by any type: never resumed) | `Throws.run(fx, String.class, body)`: `Throws.Ok` or `Throws.Err`, or `Throws.recover(fx, String.class, error -> a, body)`; the error's class lets Java type the body's lambda |
 | `Choose` | `flip` | `Choose.all(multiFx, body)`: every way, multi-shot |
 | `Trail` | `record(line)` | `Trail.keep(fx, body)`: the lines and the value, `Trail.Kept` |
-| `Emits<A>` | `emit(value)` | `Emits.collect(fx, body)`: a list; `Emits.stream(fx, body)`: a lazy `Stream` |
+| `Emit<A>` | `send(value)` | `Emit.collect(fx, body)`: a list; `Emit.stream(fx, body)`: a lazy `Stream` |
 | `Async` | `await(future)` | `Async.run(detachedFx, body)`: a `CompletableFuture`, no thread waiting |
 
 plus `Delimited` and `Reflection`, below.
@@ -310,21 +310,21 @@ Effects watched = Observer.observe(fx, new Observer() {
 
 ## Generators: streams on any JDK
 
-A generator is a body in direct style that emits values: its loops do the enumerating, the effect `Emits` only gives the
+A generator is a body in direct style that emits values: its loops do the enumerating, the effect `Emit` only gives the
 values out. One resumption per value is enough, so it runs on every implementation — on an ordinary JDK, by Loom or
 threads:
 
 ```java
-Stream<List<Integer>> triples = Emits.stream(fx, out -> {
+Stream<List<Integer>> triples = Emit.stream(fx, out -> {
     for (int a = 1; a <= 10; a++)
         for (int b = a; b <= 10; b++)
             for (int c = b; c <= 15; c++)
-                if (a * a + b * b == c * c) Emits.emit(out, List.of(a, b, c));
+                if (a * a + b * b == c * c) Emit.send(out, List.of(a, b, c));
 });   // [3, 4, 5], [6, 8, 10]
 ```
 
-- `Emits.collect(fx, body)` runs the body to its end, here, and gives the list of what it emitted.
-- `Emits.stream(fx, body)` is LAZY: the body runs as the stream is pulled, each `emit` waiting until its value is
+- `Emit.collect(fx, body)` runs the body to its end, here, and gives the list of what it emitted.
+- `Emit.stream(fx, body)` is LAZY: the body runs as the stream is pulled, each `send` waiting until its value is
   taken, so a stream that stops early (`findFirst`, `limit`) stops it, and an endless generator is fine. The body runs
   on a virtual thread of its own, so it has the capabilities it is given there, not those of the code making the
   stream. Closed, the stream drops the body's rest, which unwinds (`finally` runs); left unclosed, the body is stopped
@@ -360,8 +360,8 @@ CompletableFuture<Integer> total = Async.run(fx, async ->
 A failed future is thrown at its `await`. In the shop's handler `Async.await(async, service.quote(item))` takes the
 place of `service.quote(item).join()`: the program is the same, and now no thread waits for the service.
 
-**`Emits.stream` on a `DetachedEffects`** is PULLED: each value taken resumes the generator's detached rest up to its
-next `emit`, on the thread that pulls — the generator has no thread of its own. On other implementations it runs on a
+**`Emit.stream` on a `DetachedEffects`** is PULLED: each value taken resumes the generator's detached rest up to its
+next `send`, on the thread that pulls — the generator has no thread of its own. On other implementations it runs on a
 virtual thread of its own.
 
 A detached body runs apart from the code that started it — after its first operation, on whatever thread resumes it —

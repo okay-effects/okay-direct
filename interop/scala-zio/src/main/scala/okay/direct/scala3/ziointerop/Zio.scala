@@ -2,7 +2,7 @@ package okay.direct.scala3.ziointerop
 
 import zio.{Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.{Effect, Effects}
-import okay.direct.scala3.{Emits, Throws, Op, Reader, InPlace, handle}
+import okay.direct.scala3.{Emit, Throws, Op, Reader, InPlace, handle}
 
 /**
  * ZIO AND THE DIRECT STYLE, each of ZIO's channels one of the effects: a `ZIO[R, E, A]` in a body has its environment
@@ -93,17 +93,17 @@ def foreach[A](stream: zio.stream.ZStream[Any, Throwable, A])(f: A => Unit)(usin
         case Pulled.Failed(t) => throw t
   finally await(fiber.interrupt)
 
-/** The body as a stream of what it emits: run when the stream is pulled, each emit waiting for room; its failure
+/** The body as a stream of what it emits: run when the stream is pulled, each send waiting for room; its failure
  * the stream's. */
-def toStream[A](body: (Effect[Emits[A]], Effect[Zios]) ?=> Unit)(using Effects): zio.stream.ZStream[Any, Throwable, A] =
+def toStream[A](body: (Effect[Emit[A]], Effect[Zios]) ?=> Unit)(using Effects): zio.stream.ZStream[Any, Throwable, A] =
   zio.stream.ZStream.unwrapScoped:
     for
       queue <- zio.Queue.bounded[zio.stream.Take[Throwable, A]](1)
       producer = toTask:
-        handle(new InPlace[Emits[A], Unit, Unit]:
+        handle(new InPlace[Emit[A], Unit, Unit]:
           def ret(u: Unit) = ()
-          def answer[X](op: Emits[A] & Op[Emits[A], X]): X = op match
-            case Emits.Emit(a) => await(queue.offer(zio.stream.Take.single(a))); ()
+          def answer[X](op: Emit[A] & Op[Emit[A], X]): X = op match
+            case Emit.Send(a) => await(queue.offer(zio.stream.Take.single(a))); ()
         )(body)
       _ <- producer.foldCauseZIO(cause => queue.offer(zio.stream.Take.failCause(cause)), _ => queue.offer(zio.stream.Take.end)).forkScoped
     yield zio.stream.ZStream.fromQueue(queue).flattenTake

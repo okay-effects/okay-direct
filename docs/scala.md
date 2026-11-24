@@ -52,8 +52,8 @@ def answer[X](s: S, op: State[S] & Op[State[S], X]): (X, S) = op match
 
 The handler traits mirror the Java ones: `Handler` (`ret`, `on`; one-shot `k: X => B`), `MultiHandler` (multi-shot, on a
 `MultiEffects`), `InPlace` (`answer[X](op): X`), `StatefulHandler` (`answer[X](s, op): (X, S)`); `handle(h)(body)`,
-`handle(h, initial)(body)`. The standard effects: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emits` (a generator:
-`Emits.emit(a)`, `Emits.collect(body)`).
+`handle(h, initial)(body)`. The standard effects: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit` (a generator:
+`Emit.send(a)`, `Emit.collect(body)`).
 
 Two capabilities of one type — two `State[Int]` — are told apart by passing one explicitly, `(using outer)`. Scala 3
 prefers the more deeply nested given, so a body's own capability hides an outer one of its type.
@@ -203,14 +203,14 @@ it on cats-effect's runtime while the body waits, cheap on a virtual thread; its
 | `both(left, right)`, `race(left, right)` | two bodies at once, each an IO on its own thread: `IO.both`, `IO.race` |
 | `use(resource)(body)` | the `Resource` acquired, the body run with it, released however the body ends |
 | `foreach(stream)(f)` | each element of an fs2 `Stream` to `f`, in this body, with all its capabilities |
-| `toStream(body)` | the body as a `Stream` of what it emits (`Emits.emit`), each emit waiting for the stream to take it |
+| `toStream(body)` | the body as a `Stream` of what it emits (`Emit.send`), each send waiting for the stream to take it |
 | `monad[F]` | a cats `Monad` as the front end's, for reflection of a strict one (`Either` given, `Affine`) |
 
 ```scala
 val io: IO[(Int, Int)] = toIO(State.run(1)(await(IO.pure(41)) + State.get[Int]))
 use(Resource.make(open)(close))(file => State.put(read(file)))
 foreach(fs2.Stream(1, 2, 3).covary[IO])(a => State.put(State.get[Int] + a))
-toStream[Int] { Emits.emit(1); Emits.emit(await(IO(2))) }.compile.toList      // List(1, 2)
+toStream[Int] { Emit.send(1); Emit.send(await(IO(2))) }.compile.toList      // List(1, 2)
 ```
 
 A lazy monad (`IO`, `Eval`, `State`) cannot be reflected: its bind calls the rest after the reflect has returned, when

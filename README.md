@@ -14,7 +14,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 | Module | Artifact | What is in it |
 |---|---|---|
 | `api` | `okay-direct-api` | perform and handle, of no implementation |
-| `std` | `okay-direct-std` | `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emits`, `Async` (structured concurrency, time), `VirtualClock`, `Channel`, `Delimited`, `Reflection` on the API |
+| `std` | `okay-direct-std` | `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit`, `Async` (structured concurrency, time), `VirtualClock`, `Channel`, `Delimited`, `Reflection` on the API |
 | `tck` | `okay-direct-tck` | what every implementation does: JUnit tests to extend |
 | `loom` | `okay-direct-loom` | on HotSpot's `jdk.internal.vm.Continuation` |
 | `threads` | `okay-direct-threads` | on virtual threads, portable |
@@ -176,8 +176,8 @@ Optional<String> city = Reflection.optional(fx, p -> get(p,
 (`doc` typed data: a `Json` whose `field` and `str` give `Optional`s.)
 
 `Async.await(async, future)` awaits a future in direct style with no thread waiting: on a `DetachedEffects` the
-rest is resumed by the future's callback. `Emits.stream(fx, out -> ...)` is a generator, PULLED on a
-`DetachedEffects` (no thread of its own): plain loops enumerate, `Emits.emit` gives values out, the result a lazy
+rest is resumed by the future's callback. `Emit.stream(fx, out -> ...)` is a generator, PULLED on a
+`DetachedEffects` (no thread of its own): plain loops enumerate, `Emit.send` gives values out, the result a lazy
 `Stream` — one-shot, so on any JDK. `Reflection.stream(fx, p -> ...)` and `Reflection.each(p, stream)` reflect Java's
 streams instead, multi-shot: the bind is
 eager, the rest resumed for each element while the clause runs, as `Stream.flatMap` would resume it only when the

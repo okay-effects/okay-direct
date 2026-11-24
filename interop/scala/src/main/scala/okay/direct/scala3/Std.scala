@@ -68,16 +68,16 @@ object Choose:
     )(body)
 
 /** A generator's values: each given to its handler, the body going on when the handler has taken it. */
-enum Emits[A]:
-  case Emit[A](value: A) extends Emits[A], Op[Emits[A], Unit]
+enum Emit[A]:
+  case Send[A](value: A) extends Emit[A], Op[Emit[A], Unit]
 
-object Emits:
-  def emit[A](value: A)(using emits: Effect[Emits[A]]): Unit = emits.perform(Emit(value))
+object Emit:
+  def send[A](value: A)(using emit: Effect[Emit[A]]): Unit = emit.perform(Send(value))
 
   /** The values the body emits, in order: kept as a state, each multi-shot resumption's own. */
-  def collect[A](body: Effect[Emits[A]] ?=> Unit)(using Effects): List[A] =
-    handle(new StatefulHandler[Emits[A], List[A], Unit, List[A]]:
+  def collect[A](body: Effect[Emit[A]] ?=> Unit)(using Effects): List[A] =
+    handle(new StatefulHandler[Emit[A], List[A], Unit, List[A]]:
       def ret(values: List[A], u: Unit) = values.reverse
-      def answer[X](values: List[A], op: Emits[A] & Op[Emits[A], X]): (X, List[A]) = op match
-        case Emit(a) => ((), a :: values)
+      def answer[X](values: List[A], op: Emit[A] & Op[Emit[A], X]): (X, List[A]) = op match
+        case Send(a) => ((), a :: values)
     , Nil)(body)

@@ -155,5 +155,5 @@ wraps every capability its handlers hand out.
 | on Espresso, one branch dropped marked the whole multi-shot handling dropped | the triples' `none` | the dropped chain's fibers marked |
 | `Choose.all` collected into a list shared by the branches | an outer choice inside an inner one | lists made after both resumptions |
 | each await of a completed future resumed the rest from its clause: the stack grew with the loop | 200 000 awaits | the rest answered in its clause goes on in the run's loop |
-| HotSpot 25 crashed when a race's future was completed under a lock: the body resumed under a monitor of outside it | the race all of whose bodies fail | no resuming under a monitor: futures completed outside locks, `Emits` on a `ReentrantLock` |
+| HotSpot 25 crashed when a race's future was completed under a lock: the body resumed under a monitor of outside it | the race all of whose bodies fail | no resuming under a monitor: futures completed outside locks, `Emit` on a `ReentrantLock` |
 | a task cancelled while waiting to receive would have lost the value sent to it | the cancelled receiver | a channel's waits are revocable: claimed by the cancellation, or the value comes and the task stops at its next await |

@@ -4,7 +4,7 @@ import zio.{Exit, Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.Effects
 import okay.direct.loom.LoomEffects
 import okay.direct.threads.ThreadEffects
-import okay.direct.scala2.{Emits, Throws, Reader, State}
+import okay.direct.scala2.{Emit, Throws, Reader, State}
 import zio.stream.ZStream
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.Test
@@ -63,9 +63,9 @@ trait ZioMore { this: ZioTck =>
     val stream = toStream[Int] { (e, z) =>
       implicit val emits = e
       implicit val zios = z
-      Emits.emit(1)
-      Emits.emit(await(ZIO.succeed(2)))
-      Emits.emit(3)
+      Emit.send(1)
+      Emit.send(await(ZIO.succeed(2)))
+      Emit.send(3)
     }
     assertEquals(Exit.succeed(zio.Chunk(1, 2, 3)), run(stream.runCollect))
     assertEquals(Exit.succeed(zio.Chunk(1, 2)), run(stream.take(2).runCollect))

@@ -25,31 +25,31 @@ import okay.direct.InPlace;
  * values out, so a one-shot continuation is enough: it runs on every implementation, an ordinary JDK's too. (The
  * multi-shot alternative, a monad of streams reflected, is {@link Reflection#stream}, on a {@code MultiEffects}.)
  * <pre>{@code
- * Stream<List<Integer>> triples = Emits.stream(fx, out -> {
+ * Stream<List<Integer>> triples = Emit.stream(fx, out -> {
  *     for (int a = 1; a <= 10; a++)
  *         for (int b = a; b <= 10; b++)
  *             for (int c = b; c <= 15; c++)
- *                 if (a * a + b * b == c * c) Emits.emit(out, List.of(a, b, c));
+ *                 if (a * a + b * b == c * c) Emit.send(out, List.of(a, b, c));
  * });
  * }</pre>
  */
-public sealed interface Emits<A> {
-    record Emit<A>(A value) implements Emits<A>, Op<Emits<A>, Void, Emit<A>> {}
+public sealed interface Emit<A> {
+    record Send<A>(A value) implements Emit<A>, Op<Emit<A>, Void, Send<A>> {}
 
     /** The value given out; the body goes on when it has been taken. */
-    static <A> void emit(Effect<Emits<A>> out, A value) {
-        out.perform(new Emit<>(value));
+    static <A> void send(Effect<Emit<A>> out, A value) {
+        out.perform(new Send<>(value));
     }
 
     /** A generator's body: it emits, and returns nothing. */
     @FunctionalInterface
     interface Generator<A, E extends Exception> {
-        void run(Effect<Emits<A>> out) throws E;
+        void run(Effect<Emit<A>> out) throws E;
     }
 
     /** Every value the body emits, in order: the body run to its end, here. */
     static <A, E extends Exception> List<A> collect(Effects effects, Generator<A, E> body) throws E {
-        return effects.handle(new InPlace<Emits<A>, Void, List<A>>() {
+        return effects.handle(new InPlace<Emit<A>, Void, List<A>>() {
             private final List<A> values = new ArrayList<>();
 
             @Override
@@ -58,28 +58,28 @@ public sealed interface Emits<A> {
             }
 
             @Override
-            public void answer(Emits<A> op, Answer<Emits<A>> k) {
+            public void answer(Emit<A> op, Answer<Emit<A>> k) {
                 switch (op) {
-                    case Emit<A> emit -> {
-                        values.add(emit.value());
-                        k.answer(emit, null);
+                    case Send<A> send -> {
+                        values.add(send.value());
+                        k.answer(send, null);
                     }
                 }
             }
-        }, (Effect<Emits<A>> out) -> {
+        }, (Effect<Emit<A>> out) -> {
             body.run(out);
             return null;
         });
     }
 
     /**
-     * The values the body emits as a LAZY stream: the body run as the stream is pulled, each emit waiting until its
+     * The values the body emits as a LAZY stream: the body run as the stream is pulled, each send waiting until its
      * value is taken; a stream that stops early ({@code findFirst}, {@code limit}) stops it. Closed, the stream drops
      * the body's rest, which unwinds ({@code finally} blocks run); a stream left unclosed stops the body when it is
      * collected. A failure of the body is the stream's, thrown as it is pulled.
      *
      * <p>On a {@link DetachedEffects} (Loom's, threads') the body is PULLED: each value taken resumes its detached rest
-     * up to its next emit, on the thread that pulls — no thread of its own. On any other, it runs on a virtual thread of
+     * up to its next send, on the thread that pulls — no thread of its own. On any other, it runs on a virtual thread of
      * its own, handing its values over. Either way it has the capabilities it is given here, not those of the code
      * making the stream.
      */
@@ -108,13 +108,13 @@ public sealed interface Emits<A> {
         return StreamSupport.stream(spliterator, false).onClose(pull::stop);
     }
 
-    /** The body pulled: run up to its next emit by each value taken, its rest detached in between. */
+    /** The body pulled: run up to its next send by each value taken, its rest detached in between. */
     final class Pull<A> {
         private final DetachedEffects effects;
         private final Generator<A, ? extends Exception> body;
         /** shared with the cleaner: the rest waiting, to drop */
-        private final Later<Emits<A>>[] waiting;
-        private Emit<A> emitted;
+        private final Later<Emit<A>>[] waiting;
+        private Send<A> emitted;
         private CompletableFuture<Void> done;
         private boolean ended;
         /** Not a monitor: the body runs under it, and Loom's continuations must not run under a monitor. */
@@ -124,7 +124,7 @@ public sealed interface Emits<A> {
         private Pull(DetachedEffects effects, Generator<A, ? extends Exception> body) {
             this.effects = effects;
             this.body = body;
-            this.waiting = (Later<Emits<A>>[]) new Later<?>[1];
+            this.waiting = (Later<Emit<A>>[]) new Later<?>[1];
         }
 
         boolean next(Consumer<? super A> action) {
@@ -139,31 +139,31 @@ public sealed interface Emits<A> {
         private boolean pulled(Consumer<? super A> action) {
             if (ended) return false;
             if (done == null) {
-                done = effects.start(new DetachedHandler<Emits<A>, Void, Void>() {
+                done = effects.start(new DetachedHandler<Emit<A>, Void, Void>() {
                     @Override
                     public Void ret(Void unit) {
                         return null;
                     }
 
                     @Override
-                    public void on(Emits<A> op, Later<Emits<A>> k) {
+                    public void on(Emit<A> op, Later<Emit<A>> k) {
                         switch (op) {
-                            case Emit<A> emit -> {
-                                emitted = emit;
+                            case Send<A> send -> {
+                                emitted = send;
                                 waiting[0] = k;
                             }
                         }
                     }
-                }, (okay.direct.Effect<Emits<A>> out) -> {
+                }, (okay.direct.Effect<Emit<A>> out) -> {
                     body.run(out);
                     return null;
                 });
             } else {
                 var k = waiting[0];
-                var emit = emitted;
+                var send = emitted;
                 waiting[0] = null;
                 emitted = null;
-                k.answer(emit, null);
+                k.answer(send, null);
             }
             if (waiting[0] != null) {
                 action.accept(emitted.value());
@@ -194,7 +194,7 @@ public sealed interface Emits<A> {
         Runnable stopper() {
             var waiting = this.waiting;
             return () -> {
-                Later<Emits<A>> k;
+                Later<Emit<A>> k;
                 synchronized (waiting) {
                     k = waiting[0];
                     waiting[0] = null;
@@ -268,27 +268,27 @@ public sealed interface Emits<A> {
         private void run() {
             Handed last;
             try {
-                effects.handle(new InPlace<Emits<A>, Void, Void>() {
+                effects.handle(new InPlace<Emit<A>, Void, Void>() {
                     @Override
                     public Void ret(Void unit) {
                         return null;
                     }
 
                     @Override
-                    public void answer(Emits<A> op, Answer<Emits<A>> k) {
+                    public void answer(Emit<A> op, Answer<Emit<A>> k) {
                         switch (op) {
-                            case Emit<A> emit -> {
+                            case Send<A> send -> {
                                 try {
-                                    handoff.put(new Value(emit.value()));
+                                    handoff.put(new Value(send.value()));
                                 } catch (InterruptedException e) {
                                     // the stream stopped: no answer, so the body's rest is dropped and unwinds
                                     throw new Stopped();
                                 }
-                                k.answer(emit, null);
+                                k.answer(send, null);
                             }
                         }
                     }
-                }, (Effect<Emits<A>> out) -> {
+                }, (Effect<Emit<A>> out) -> {
                     body.run(out);
                     return null;
                 });

@@ -80,19 +80,19 @@ object Choose {
 }
 
 /** A generator's values: each given to its handler, the body going on when the handler has taken it. */
-sealed trait Emits[A]
+sealed trait Emit[A]
 
-object Emits {
-  final case class Emit[A](value: A) extends Emits[A] with Op[Emits[A], Unit]
+object Emit {
+  final case class Send[A](value: A) extends Emit[A] with Op[Emit[A], Unit]
 
-  def emit[A](value: A)(implicit emits: Effect[Emits[A]]): Unit = emits.perform(Emit(value))
+  def send[A](value: A)(implicit emit: Effect[Emit[A]]): Unit = emit.perform(Send(value))
 
   /** The values the body emits, in order: kept as a state, each multi-shot resumption's own. */
-  def collect[A](body: Effect[Emits[A]] => Unit)(implicit fx: Effects): List[A] =
-    handle(new StatefulHandler[Emits[A], List[A], Unit, List[A]] {
+  def collect[A](body: Effect[Emit[A]] => Unit)(implicit fx: Effects): List[A] =
+    handle(new StatefulHandler[Emit[A], List[A], Unit, List[A]] {
       def ret(values: List[A], u: Unit): List[A] = values.reverse
-      def answer(values: List[A], op: Emits[A], k: Answer[Emits[A]]): List[A] = op match {
-        case emit: Emit[A] => k(emit, ()); emit.value :: values
+      def answer(values: List[A], op: Emit[A], k: Answer[Emit[A]]): List[A] = op match {
+        case send: Send[A] => k(send, ()); send.value :: values
       }
     }, Nil)(body)
 }

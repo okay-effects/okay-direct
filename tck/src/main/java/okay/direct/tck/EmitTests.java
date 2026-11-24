@@ -10,45 +10,45 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import okay.direct.Effect;
 import okay.direct.Effects;
-import okay.direct.std.Emits;
+import okay.direct.std.Emit;
 import org.junit.jupiter.api.Test;
 
 /** Generators: loops enumerate, an effect gives the values out; one-shot, on every implementation. */
-interface EmitsTests {
+interface EmitTests {
     Effects effects();
 
-    static void triples(Effect<Emits<List<Integer>>> out) {
+    static void triples(Effect<Emit<List<Integer>>> out) {
         for (int a = 1; a <= 10; a++)
             for (int b = a; b <= 10; b++)
                 for (int c = b; c <= 15; c++)
-                    if (a * a + b * b == c * c) Emits.emit(out, List.of(a, b, c));
+                    if (a * a + b * b == c * c) Emit.send(out, List.of(a, b, c));
     }
 
     @Test
     default void aGeneratorCollected() {
-        assertEquals(List.of(List.of(3, 4, 5), List.of(6, 8, 10)), Emits.collect(effects(), EmitsTests::triples));
+        assertEquals(List.of(List.of(3, 4, 5), List.of(6, 8, 10)), Emit.collect(effects(), EmitTests::triples));
     }
 
     @Test
     default void aGeneratorAsALazyStream() {
         var emitted = new AtomicInteger();
-        var first = Emits.<Integer>stream(effects(), out -> {
+        var first = Emit.<Integer>stream(effects(), out -> {
             for (int i = 1; ; i++) {
                 emitted.incrementAndGet();
-                Emits.emit(out, i * i);
+                Emit.send(out, i * i);
             }
         }).filter(x -> x > 50).findFirst();
         assertEquals(64, first.orElseThrow());
         assertTrue(emitted.get() <= 9, "pulled only as far as needed: " + emitted.get());
-        assertEquals(List.of(List.of(3, 4, 5), List.of(6, 8, 10)), Emits.stream(effects(), EmitsTests::triples).toList());
+        assertEquals(List.of(List.of(3, 4, 5), List.of(6, 8, 10)), Emit.stream(effects(), EmitTests::triples).toList());
     }
 
     @Test
     default void aClosedStreamStopsItsBodyWhichUnwinds() throws InterruptedException {
         var cleaned = new CountDownLatch(1);
-        try (var stream = Emits.<Integer>stream(effects(), out -> {
+        try (var stream = Emit.<Integer>stream(effects(), out -> {
             try {
-                for (int i = 0; ; i++) Emits.emit(out, i);
+                for (int i = 0; ; i++) Emit.send(out, i);
             } finally {
                 cleaned.countDown();
             }
@@ -60,8 +60,8 @@ interface EmitsTests {
 
     @Test
     default void aFailureOfTheBodyIsTheStreams() {
-        var stream = Emits.<Integer>stream(effects(), out -> {
-            Emits.emit(out, 1);
+        var stream = Emit.<Integer>stream(effects(), out -> {
+            Emit.send(out, 1);
             throw new IllegalStateException("generator failed");
         });
         var e = assertThrows(IllegalStateException.class, stream::toList);

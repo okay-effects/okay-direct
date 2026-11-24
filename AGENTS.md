@@ -66,7 +66,7 @@ row (`Throws.recover`, `Throws.catching`/`Throws.rethrow`). The picture behind i
 
 Handler kinds: `InPlace` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
 wrap the result), `StatefulHandler` (state per resumption), `MultiHandler` (`MultiResume`, only on a `MultiEffects`).
-Standard effects in `okay.direct.std`: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emits`, `Async`, `VirtualClock`,
+Standard effects in `okay.direct.std`: `State`, `Reader`, `Throws`, `Choose`, `Trail`, `Emit`, `Async`, `VirtualClock`,
 `Channel`, `Delimited`, `Reflection`; `okay-direct-sql` has `Transaction`/`Sql`, `okay-direct-otel` `Tracing.traced`.
 
 Scala 3 (`import okay.direct.scala3.*`): an effect is an enum (a GADT), a capability a context parameter:
@@ -144,7 +144,7 @@ Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on
 - `Choose.all`/`MultiHandler` need a `MultiEffects` (`EspressoEffects`, on the Espresso JVM with
   `--experimental-options --java.Continuum=true`); on Loom/threads it does not compile. On Espresso the heap is shared
   between branches: build results from values made after the resumptions, keep per-branch state in a
-  `StatefulHandler`. For generators on any JDK use `Emits.stream`.
+  `StatefulHandler`. For generators on any JDK use `Emit.stream`.
 - A dropped rest unwinds by throwing `Abandoned` at the `perform`: never catch `Throwable`/`Abandoned` in programs;
   `finally` blocks do run.
 - `Implicit<F>` capabilities are checked at run time (`get` throws `IllegalStateException` when unbound), unlike

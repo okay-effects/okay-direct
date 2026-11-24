@@ -5,7 +5,7 @@ import cats.effect.unsafe.IORuntime
 import okay.direct.Effects
 import okay.direct.loom.LoomEffects
 import okay.direct.threads.ThreadEffects
-import okay.direct.scala2.{Delimited, Emits, Throws, State}
+import okay.direct.scala2.{Delimited, Emit, Throws, State}
 import scala.concurrent.duration._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
 import org.junit.jupiter.api.Test
@@ -67,9 +67,9 @@ trait CatsMore { this: CatsTck =>
     val stream = toStream[Int] { (e, a) =>
       implicit val emits = e
       implicit val awaits = a
-      Emits.emit(1)
-      Emits.emit(await(IO(2)))
-      Emits.emit(3)
+      Emit.send(1)
+      Emit.send(await(IO(2)))
+      Emit.send(3)
     }
     assertEquals(List(1, 2, 3), stream.compile.toList.unsafeRunSync())
     assertEquals(List(1, 2), stream.take(2).compile.toList.unsafeRunSync())
