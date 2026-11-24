@@ -18,7 +18,7 @@ import okay.direct.Effect;
 import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.Later;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 
 /**
  * A GENERATOR: a body in direct style that emits values. Its loops do the enumerating, the effect only gives the
@@ -49,16 +49,16 @@ public sealed interface Emits<A> {
 
     /** Every value the body emits, in order: the body run to its end, here. */
     static <A, E extends Exception> List<A> collect(Effects effects, Generator<A, E> body) throws E {
-        return effects.handle(new TailHandler<Emits<A>, Void, List<A>>() {
+        return effects.handle(new InPlace<Emits<A>, Void, List<A>>() {
             private final List<A> values = new ArrayList<>();
 
             @Override
-            public List<A> value(Void unit) {
+            public List<A> ret(Void unit) {
                 return List.copyOf(values);
             }
 
             @Override
-            public void operation(Emits<A> op, Answer<Emits<A>> k) {
+            public void answer(Emits<A> op, Answer<Emits<A>> k) {
                 switch (op) {
                     case Emit<A> emit -> {
                         values.add(emit.value());
@@ -141,12 +141,12 @@ public sealed interface Emits<A> {
             if (done == null) {
                 done = effects.start(new DetachedHandler<Emits<A>, Void, Void>() {
                     @Override
-                    public Void value(Void unit) {
+                    public Void ret(Void unit) {
                         return null;
                     }
 
                     @Override
-                    public void operation(Emits<A> op, Later<Emits<A>> k) {
+                    public void on(Emits<A> op, Later<Emits<A>> k) {
                         switch (op) {
                             case Emit<A> emit -> {
                                 emitted = emit;
@@ -268,14 +268,14 @@ public sealed interface Emits<A> {
         private void run() {
             Handed last;
             try {
-                effects.handle(new TailHandler<Emits<A>, Void, Void>() {
+                effects.handle(new InPlace<Emits<A>, Void, Void>() {
                     @Override
-                    public Void value(Void unit) {
+                    public Void ret(Void unit) {
                         return null;
                     }
 
                     @Override
-                    public void operation(Emits<A> op, Answer<Emits<A>> k) {
+                    public void answer(Emits<A> op, Answer<Emits<A>> k) {
                         switch (op) {
                             case Emit<A> emit -> {
                                 try {

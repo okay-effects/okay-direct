@@ -93,7 +93,7 @@ public final class Fx<R> {
     }
 
     /** The program with its first place handled in place (constant stack). */
-    public static <F, R, A, B> Program<B, R> handle(TailHandler<F, A, B> handler,
+    public static <F, R, A, B> Program<B, R> handle(InPlace<F, A, B> handler,
             Program<A, Eff<F, R>> program) {
         return outer -> outer.effects.handle(handler, (Effect<F> e) -> program.run(with(e, outer)));
     }

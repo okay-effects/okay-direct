@@ -2,7 +2,7 @@ package okay.direct.scala2.ziointerop
 
 import zio.{Runtime, Unsafe, ZEnvironment, ZIO}
 import okay.direct.{Effect, Effects}
-import okay.direct.scala2.{Op, Answer, Emits, Fail, Reader, TailHandler, handle}
+import okay.direct.scala2.{Op, Answer, Emits, Fail, Reader, InPlace, handle}
 
 /** ZIOs awaited in a direct-style body. */
 sealed trait Zios
@@ -34,9 +34,9 @@ object Zio {
     }
 
   private def running[A](runtime: Runtime[Any])(body: Effect[Zios] => A)(implicit fx: Effects): A =
-    handle(new TailHandler[Zios, A, A] {
-      def value(a: A): A = a
-      def apply(op: Zios, k: Answer[Zios]): Unit = op match {
+    handle(new InPlace[Zios, A, A] {
+      def ret(a: A): A = a
+      def answer(op: Zios, k: Answer[Zios]): Unit = op match {
         case run: Zios.Run[x] => k(run, Unsafe.unsafe(implicit unsafe => runtime.unsafe.run(run.zio).getOrThrowFiberFailure()))
       }
     })(body)
@@ -110,9 +110,9 @@ object Zio {
       for {
         queue <- zio.Queue.bounded[zio.stream.Take[Throwable, A]](1)
         producer = toTask { implicit zios =>
-          handle(new TailHandler[Emits[A], Unit, Unit] {
-            def value(u: Unit): Unit = ()
-            def apply(op: Emits[A], k: Answer[Emits[A]]): Unit = op match {
+          handle(new InPlace[Emits[A], Unit, Unit] {
+            def ret(u: Unit): Unit = ()
+            def answer(op: Emits[A], k: Answer[Emits[A]]): Unit = op match {
               case emit: Emits.Emit[A] => await(queue.offer(zio.stream.Take.single(emit.value))); k(emit, ())
             }
           })((emits: Effect[Emits[A]]) => body(emits, zios))

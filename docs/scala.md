@@ -45,13 +45,13 @@ A clause gets the operation as `E & Op[E, X]` and returns its answer; the match 
 `X` is known, so there is no witness and no cast:
 
 ```scala
-def apply[X](s: S, op: State[S] & Op[State[S], X]): (X, S) = op match
+def answer[X](s: S, op: State[S] & Op[State[S], X]): (X, S) = op match
   case Get() => (s, s)
   case Put(next) => ((), next)
 ```
 
-The handler traits mirror the Java ones: `Handler` (one-shot `k: X => R`), `MultiHandler` (multi-shot, on a
-`MultiEffects`), `TailHandler` (`apply[X](op): X`), `StatefulHandler` (`apply[X](s, op): (X, S)`); `handle(h)(body)`,
+The handler traits mirror the Java ones: `Handler` (`ret`, `on`; one-shot `k: X => B`), `MultiHandler` (multi-shot, on a
+`MultiEffects`), `InPlace` (`answer[X](op): X`), `StatefulHandler` (`answer[X](s, op): (X, S)`); `handle(h)(body)`,
 `handle(h, initial)(body)`. The standard effects: `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits` (a generator:
 `Emits.emit(a)`, `Emits.collect(body)`).
 
@@ -91,7 +91,7 @@ enum Pay:
   case Balance() extends Pay, AuditedOp[Pay, Int]
 
 def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]) = new Interceptor[Pay, Audited[Pay]]:
-  def apply[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+  def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
     case Pay.Transfer(to, amount) if amount > limit => Trail.record(s"refused: $amount"); Fail.raise("refused")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim.toUpperCase, amount))
     case Pay.Balance() => pass(Pay.Balance())

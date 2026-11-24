@@ -5,7 +5,7 @@ import okay.direct.Handler;
 import okay.direct.MultiEffects;
 import okay.direct.MultiHandler;
 import okay.direct.StatefulHandler;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import org.graalvm.continuations.Continuation;
 
 /**
@@ -22,23 +22,23 @@ public final class EspressoEffects implements MultiEffects {
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(Handler<F, A, B, E> handler, Body<F, A, E> body) throws E {
         return new Handling.General<>(handler, body).run();
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body) throws E {
-        return new Handling.Tail<F, A, R, E>(handler, body).run();
+    public <F, A, B, E extends Exception> B handle(InPlace<F, A, B> handler, Body<F, A, E> body) throws E {
+        return new Handling.Tail<F, A, B, E>(handler, body).run();
     }
 
     @Override
-    public <F, S, A, R, E extends Exception> R handle(StatefulHandler<F, S, A, R> handler, S initial, Body<F, A, E> body)
+    public <F, S, A, B, E extends Exception> B handle(StatefulHandler<F, S, A, B> handler, S initial, Body<F, A, E> body)
             throws E {
-        return new Handling.Stateful<F, S, A, R, E>(handler, initial, body).run();
+        return new Handling.Stateful<F, S, A, B, E>(handler, initial, body).run();
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(MultiHandler<F, A, R, E> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(MultiHandler<F, A, B, E> handler, Body<F, A, E> body) throws E {
         return new Handling.Multi<>(handler, body).run();
     }
 

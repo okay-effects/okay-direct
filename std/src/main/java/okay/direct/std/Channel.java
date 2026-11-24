@@ -215,36 +215,36 @@ public final class Channel<T> {
     }
 
     /** A select's cases: the first to be ready chosen, its function run in the body. */
-    public static <R> Select<R> select() {
+    public static <B> Select<B> select() {
         return new Select<>();
     }
 
     /** The cases of a select, built and then awaited. */
-    public static final class Select<R> {
+    public static final class Select<B> {
         private final List<Channel<?>> channels = new ArrayList<>();
-        private final List<Function<Object, R>> onReceive = new ArrayList<>();
+        private final List<Function<Object, B>> onReceive = new ArrayList<>();
         private Duration limit;
-        private Supplier<R> onTimeout;
+        private Supplier<B> onTimeout;
 
         private Select() {}
 
         /** A value received from {@code channel}, given to {@code then}; a closed, empty one throws {@link Closed}. */
         @SuppressWarnings("unchecked") // the value received from a Channel<T> is a T
-        public <T> Select<R> receive(Channel<T> channel, Function<? super T, ? extends R> then) {
+        public <T> Select<B> receive(Channel<T> channel, Function<? super T, ? extends B> then) {
             channels.add(channel);
             onReceive.add(value -> then.apply((T) value));
             return this;
         }
 
         /** Nothing received within {@code limit}, by the run's clock: {@code then}. */
-        public Select<R> timeout(Duration limit, Supplier<? extends R> then) {
+        public Select<B> timeout(Duration limit, Supplier<? extends B> then) {
             this.limit = limit;
             this.onTimeout = then::get;
             return this;
         }
 
         /** Waits for the first case ready, and runs its function here, in the body. */
-        public R await(Effect<Async> async) {
+        public B await(Effect<Async> async) {
             var claim = new AtomicBoolean();
             var first = new Receiver(claim, -1);
             var cases = new ArrayList<Receiver>();

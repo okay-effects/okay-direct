@@ -33,10 +33,10 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 | `Op<F, X, Self>` (okay-java-api's `okay.effect.Op`) | an operation of the effect `F`, answered by an `X` |
 | `Effect<F>` | the capability to perform `F`'s operations, given to the body by `F`'s handler |
 | `Body<F, A, E>` | the handled body: run with the capability, it may throw the checked exception `E` |
-| `Handler<F, A, R, E>` | `value(a)`, and `operation(op, k)` with `k` the rest of the body, `Resume`: one-shot |
-| `MultiHandler<F, A, R, E>` | the same with `k` a `MultiResume`: resumed any number of times |
-| `TailHandler<F, A, R>` | answers every operation in place, `Answer<F>`: runs in constant stack |
-| `StatefulHandler<F, S, A, R>` | the same with a state kept by the implementation: each resumption's own |
+| `Handler<F, A, B, E>` | `ret(a)`, and `on(op, k)` with `k` the rest of the body, `Resume`: one-shot |
+| `MultiHandler<F, A, B, E>` | the same with `k` a `MultiResume`: resumed any number of times |
+| `InPlace<F, A, B>` | answers every operation in place, `Answer<F>`: runs in constant stack |
+| `StatefulHandler<F, S, A, B>` | the same with a state kept by the implementation: each resumption's own |
 | `Effects` | an implementation: `handle(handler, body) throws E`, for one-shot handlers |
 | `MultiEffects` | an implementation with multi-shot continuations: `MultiHandler`s too |
 | `Abandoned` | thrown at `perform` when the handler drops the rest: the body unwinds, `finally` runs |
@@ -55,7 +55,7 @@ public sealed interface State<S> {
     record Put<S>(S value) implements State<S>, Op<State<S>, Void, Put<S>> {}
 }
 
-public void operation(State<S> op, Answer<State<S>> k) {
+public void answer(State<S> op, Answer<State<S>> k) {
     switch (op) {
         case Get<S> get -> k.answer(get, state);
         case Put<S> put -> { state = put.value(); k.answer(put, null); }
@@ -89,9 +89,9 @@ interface PriceService {
 
 // a handler: what Price means — asked of the service, its answer waited for
 static <A> A pricesFrom(Effects fx, PriceService service, Body<Prices, A, RuntimeException> body) {
-    return fx.handle(new TailHandler<Prices, A, A>() {
-        public A value(A result) { return result; }
-        public void operation(Prices op, Answer<Prices> k) {
+    return fx.handle(new InPlace<Prices, A, A>() {
+        public A ret(A result) { return result; }
+        public void answer(Prices op, Answer<Prices> k) {
             switch (op) {
                 case Prices.Price p -> k.answer(p, service.quote(p.item()).join());
             }
@@ -280,7 +280,7 @@ enum State[S]:
   case Get[S]() extends State[S], Op[State[S], S]
   case Put[S](value: S) extends State[S], Op[State[S], Unit]
 
-def apply[X](op: State[S] & Op[State[S], X]): X = op match
+def answer[X](op: State[S] & Op[State[S], X]): X = op match
   case Get() => state
   case Put(s) => state = s
 
@@ -301,7 +301,7 @@ enum Pay:
   case Balance() extends Pay, AuditedOp[Pay, Int]
 
 def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]) = new Interceptor[Pay, Audited[Pay]]:
-  def apply[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+  def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
     case Pay.Transfer(to, amount) if amount > limit => Fail.raise(s"refused: $amount")
     case Pay.Transfer(to, amount) => pass(Pay.Transfer(to.trim, amount))
     case Pay.Balance() => pass(Pay.Balance())

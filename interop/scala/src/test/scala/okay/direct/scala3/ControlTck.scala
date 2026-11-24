@@ -14,8 +14,8 @@ enum Pay:
 def bank[A](balance: Int)(body: Audit.Vault[Pay] ?=> A)(using Effects): A =
   var left = balance
   handleSensitive(new SensitiveHandler[Pay, A, A]:
-    def value(a: A) = a
-    def apply[X](op: Pay & AuditedOp[Pay, X]): X = op match
+    def ret(a: A) = a
+    def answer[X](op: Pay & AuditedOp[Pay, X]): X = op match
       case Pay.Transfer(to, amount) => left -= amount; s"ok:$to:$amount"
       case Pay.Balance() => left
   )(body)
@@ -25,7 +25,7 @@ def masked(account: String): String = "****" + account.takeRight(4)
 /** The audit of payments: normalized, told masked, refused over the limit. */
 def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]): Interceptor[Pay, Audited[Pay]] =
   new Interceptor[Pay, Audited[Pay]]:
-    def apply[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
+    def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = op match
       case Pay.Transfer(to0, amount) =>
         val to = to0.trim.toUpperCase
         if amount > limit then
@@ -42,7 +42,7 @@ def guarded(limit: Int)(using Effect[Trail], Effect[Fail[String]]): Interceptor[
         b
 
 val passing: Interceptor[Pay, Audited[Pay]] = new Interceptor[Pay, Audited[Pay]]:
-  def apply[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = pass(op)
+  def on[X](op: Pay & Op[Audited[Pay], X], pass: Pass[Audited[Pay]]): X = pass(op)
 
 /** A program of payments: it knows nothing of the audit. */
 def payments(using pay: Effect[Audited[Pay]]): Int =
@@ -59,7 +59,7 @@ abstract class ControlTck:
     val result = Trail.keep:
       State.run(1):
         intercept(new Interceptor[State[Int], State[Int]]:
-          def apply[X](op: State[Int] & Op[State[Int], X], pass: Pass[State[Int]]): X = op match
+          def on[X](op: State[Int] & Op[State[Int], X], pass: Pass[State[Int]]): X = op match
             case State.Put(v) => Trail.record(s"put $v"); pass(State.Put(v * 2))
             case get @ State.Get() => pass(get)
         ):

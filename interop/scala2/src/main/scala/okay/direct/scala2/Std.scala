@@ -15,8 +15,8 @@ object State {
   /** The body from `initial`: the state it ends with, and its value. Each multi-shot resumption's own. */
   def run[S, A](initial: S)(body: Effect[State[S]] => A)(implicit fx: Effects): (S, A) =
     handle(new StatefulHandler[State[S], S, A, (S, A)] {
-      def value(s: S, a: A): (S, A) = (s, a)
-      def apply(s: S, op: State[S], k: Answer[State[S]]): S = op match {
+      def ret(s: S, a: A): (S, A) = (s, a)
+      def answer(s: S, op: State[S], k: Answer[State[S]]): S = op match {
         case get: Get[S] => k(get, s); s
         case put: Put[S] => k(put, ()); put.value
       }
@@ -32,9 +32,9 @@ object Reader {
   def ask[E](implicit reader: Effect[Reader[E]]): E = reader.perform(Ask[E]())
 
   def run[E, A](env: E)(body: Effect[Reader[E]] => A)(implicit fx: Effects): A =
-    handle(new TailHandler[Reader[E], A, A] {
-      def value(a: A): A = a
-      def apply(op: Reader[E], k: Answer[Reader[E]]): Unit = op match {
+    handle(new InPlace[Reader[E], A, A] {
+      def ret(a: A): A = a
+      def answer(op: Reader[E], k: Answer[Reader[E]]): Unit = op match {
         case ask: Ask[E] => k(ask, env)
       }
     })(body)
@@ -50,8 +50,8 @@ object Fail {
 
   def attempt[E, A](body: Effect[Fail[E]] => A)(implicit fx: Effects): Either[E, A] =
     handle(new Handler[Fail[E], A, Either[E, A]] {
-      def value(a: A): Either[E, A] = Right(a)
-      def apply(op: Fail[E], k: Resume[Fail[E], Either[E, A]]): Either[E, A] = op match {
+      def ret(a: A): Either[E, A] = Right(a)
+      def on(op: Fail[E], k: Resume[Fail[E], Either[E, A]]): Either[E, A] = op match {
         case Raise(e) => Left(e)
       }
     })(body)
@@ -68,8 +68,8 @@ object Choose {
   /** Every way the choices can go: the body's values, all of them. */
   def all[A](body: Effect[Choose] => A)(implicit fx: MultiEffects): List[A] =
     handle(new MultiHandler[Choose, A, List[A]] {
-      def value(a: A): List[A] = List(a)
-      def apply(op: Choose, k: Resume[Choose, List[A]]): List[A] = op match {
+      def ret(a: A): List[A] = List(a)
+      def on(op: Choose, k: Resume[Choose, List[A]]): List[A] = op match {
         case Flip => k(Flip, true) ++ k(Flip, false)
       }
     })(body)
@@ -86,8 +86,8 @@ object Emits {
   /** The values the body emits, in order: kept as a state, each multi-shot resumption's own. */
   def collect[A](body: Effect[Emits[A]] => Unit)(implicit fx: Effects): List[A] =
     handle(new StatefulHandler[Emits[A], List[A], Unit, List[A]] {
-      def value(values: List[A], u: Unit): List[A] = values.reverse
-      def apply(values: List[A], op: Emits[A], k: Answer[Emits[A]]): List[A] = op match {
+      def ret(values: List[A], u: Unit): List[A] = values.reverse
+      def answer(values: List[A], op: Emits[A], k: Answer[Emits[A]]): List[A] = op match {
         case emit: Emit[A] => k(emit, ()); emit.value :: values
       }
     }, Nil)(body)

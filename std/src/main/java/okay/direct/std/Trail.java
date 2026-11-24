@@ -24,12 +24,12 @@ public sealed interface Trail {
     static <A, E extends Exception> Kept<A> keep(Effects effects, Body<Trail, A, E> body) throws E {
         return effects.handle(new StatefulHandler<Trail, List<String>, A, Kept<A>>() {
             @Override
-            public Kept<A> value(List<String> lines, A value) {
+            public Kept<A> ret(List<String> lines, A value) {
                 return new Kept<>(lines, value);
             }
 
             @Override
-            public List<String> operation(List<String> lines, Trail op, Answer<Trail> k) {
+            public List<String> answer(List<String> lines, Trail op, Answer<Trail> k) {
                 return switch (op) {
                     case Record record -> {
                         k.answer(record, null);

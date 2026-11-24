@@ -21,16 +21,16 @@ def shift0[A, R](body: (A => R) => R)(using prompt: Prompt[R]): A = prompt.shift
 /** The body delimited, its prompt in scope; its `k`s one-shot. */
 def reset[R](body: Prompt[R] ?=> R)(using Effects): R =
   handle(new Handler[Reset[R], R, R]:
-    def value(r: R) = r
-    def apply[X](op: Reset[R] & Op[Reset[R], X], k: X => R): R = op match
+    def ret(r: R) = r
+    def on[X](op: Reset[R] & Op[Reset[R], X], k: X => R): R = op match
       case Reset.Shift0(f) => f(k)
   )(body(using Prompt(summon[Effect[Reset[R]]])))
 
 /** The body delimited, its `k`s multi-shot. */
 def resetMulti[R](body: Prompt[R] ?=> R)(using MultiEffects): R =
   handle(new MultiHandler[Reset[R], R, R]:
-    def value(r: R) = r
-    def apply[X](op: Reset[R] & Op[Reset[R], X], k: X => R): R = op match
+    def ret(r: R) = r
+    def on[X](op: Reset[R] & Op[Reset[R], X], k: X => R): R = op match
       case Reset.Shift0(f) => f(k)
   )(body(using Prompt(summon[Effect[Reset[R]]])))
 

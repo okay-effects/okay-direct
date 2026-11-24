@@ -16,7 +16,7 @@ import okay.direct.Handler;
 import okay.direct.MultiEffects;
 import okay.direct.Program;
 import okay.effect.Pure;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.std.Delimited;
 import okay.direct.std.Delimited.Prompt;
 import okay.direct.std.Reflection;
@@ -172,7 +172,7 @@ public abstract class MultiEffectsTck extends EffectsTck {
             }
 
             @Override
-            public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body)
+            public <F, A, R, E extends Exception> R handle(InPlace<F, A, R> handler, Body<F, A, E> body)
                     throws E {
                 return multi.handle(handler, body);
             }

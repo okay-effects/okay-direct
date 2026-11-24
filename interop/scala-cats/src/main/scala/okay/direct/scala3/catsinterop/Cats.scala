@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.IORuntime
 import okay.direct.{Effect, Effects}
-import okay.direct.scala3.{Affine, Emits, Monad, Op, TailHandler, handle}
+import okay.direct.scala3.{Affine, Emits, Monad, Op, InPlace, handle}
 
 /**
  * CATS-EFFECT AND THE DIRECT STYLE. An `IO` in a body is AWAITED: run on cats-effect's runtime, the body waiting for
@@ -20,9 +20,9 @@ enum Awaits:
 def await[A](io: IO[A])(using awaits: Effect[Awaits]): A = awaits.perform(Awaits.Await(io))
 
 private def awaiting[A](run: [X] => IO[X] => X)(body: Effect[Awaits] ?=> A)(using Effects): A =
-  handle(new TailHandler[Awaits, A, A]:
-    def value(a: A) = a
-    def apply[X](op: Awaits & Op[Awaits, X]): X = op match
+  handle(new InPlace[Awaits, A, A]:
+    def ret(a: A) = a
+    def answer[X](op: Awaits & Op[Awaits, X]): X = op match
       case Awaits.Await(io) => run(io)
   )(body)
 
@@ -91,9 +91,9 @@ def foreach[A](stream: fs2.Stream[IO, A])(f: A => Unit)(using Effect[Awaits]): U
 def toStream[A](body: (Effect[Emits[A]], Effect[Awaits]) ?=> Unit)(using Effects): fs2.Stream[IO, A] =
   fs2.Stream.eval(cats.effect.std.Queue.synchronous[IO, Option[A]]).flatMap: queue =>
     val producer = toIO:
-      handle(new TailHandler[Emits[A], Unit, Unit]:
-        def value(u: Unit) = ()
-        def apply[X](op: Emits[A] & Op[Emits[A], X]): X = op match
+      handle(new InPlace[Emits[A], Unit, Unit]:
+        def ret(u: Unit) = ()
+        def answer[X](op: Emits[A] & Op[Emits[A], X]): X = op match
           case Emits.Emit(a) => await(queue.offer(Some(a)))
       )(body)
     fs2.Stream.fromQueueNoneTerminated(queue).concurrently(fs2.Stream.eval(producer.flatMap(_ => queue.offer(None))))

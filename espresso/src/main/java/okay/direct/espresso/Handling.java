@@ -14,7 +14,7 @@ import okay.direct.MultiHandler;
 import okay.direct.MultiResume;
 import okay.direct.Resume;
 import okay.direct.StatefulHandler;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import org.graalvm.continuations.ContinuationEntryPoint;
 
 /**
@@ -23,7 +23,7 @@ import org.graalvm.continuations.ContinuationEntryPoint;
  * copies the chain of fibers from the operation up to its handling, with the handlings installed in them and their
  * state: so a state handled inside a choice is each branch's own, and one outside is threaded through them.
  */
-abstract class Handling<F, A, R, E extends Exception> {
+abstract class Handling<F, A, B, E extends Exception> {
     final Object key;
     final Body<F, A, E> body;
     /** The fiber whose code runs this handling's clauses; null: the thread's. */
@@ -38,14 +38,14 @@ abstract class Handling<F, A, R, E extends Exception> {
     }
 
     /** A copy of this handling, for a branch: its fields as they are, the references remapped after. */
-    Handling(Handling<F, A, R, E> of) {
+    Handling(Handling<F, A, B, E> of) {
         this.key = of.key;
         this.body = of.body;
         this.owner = of.owner;
         this.active = of.active;
     }
 
-    abstract Handling<F, A, R, E> copy();
+    abstract Handling<F, A, B, E> copy();
 
     void remap(Map<Object, Object> copies) {
         owner = (Fiber) copies.getOrDefault(owner, owner);
@@ -53,10 +53,10 @@ abstract class Handling<F, A, R, E extends Exception> {
     }
 
     /** The body's dispatch: its value, its failure, or each operation to the clause. */
-    abstract R dispatch(Driver.Event event) throws E;
+    abstract B dispatch(Driver.Event event) throws E;
 
     /** Runs the handled body, in the owner's code. */
-    final R run() throws E {
+    final B run() throws E {
         var driver = Driver.current();
         var first = owner == null ? driver.loop(this, Fiber.start(this), null) : (Driver.Event) driver.ask(new Driver.Start(this));
         return dispatch(first);
@@ -202,35 +202,35 @@ abstract class Handling<F, A, R, E extends Exception> {
     }
 
     /** A general handler: each operation to its clause with the rest, one-shot. */
-    static final class General<F, A, R, E extends Exception> extends Handling<F, A, R, E> {
-        private final Handler<F, A, R, E> handler;
+    static final class General<F, A, B, E extends Exception> extends Handling<F, A, B, E> {
+        private final Handler<F, A, B, E> handler;
 
-        General(Handler<F, A, R, E> handler, Body<F, A, E> body) {
+        General(Handler<F, A, B, E> handler, Body<F, A, E> body) {
             super(body);
             this.handler = handler;
         }
 
-        private General(General<F, A, R, E> of) {
+        private General(General<F, A, B, E> of) {
             super(of);
             this.handler = of.handler;
         }
 
         @Override
-        General<F, A, R, E> copy() {
+        General<F, A, B, E> copy() {
             return new General<>(this);
         }
 
         @Override
-        R dispatch(Driver.Event event) throws E {
+        B dispatch(Driver.Event event) throws E {
             return switch (event) {
-                case Driver.Returned returned -> handler.value(value(returned));
+                case Driver.Returned returned -> handler.ret(value(returned));
                 case Driver.Failed failed -> throw rethrown(failed);
                 case Driver.Ended ended -> throw ended();
                 case Driver.Performed performed -> {
-                    var k = new Once<F, A, R, E>(this, performed);
+                    var k = new Once<F, A, B, E>(this, performed);
                     active = k;
                     try {
-                        yield handler.operation(op(performed), k);
+                        yield handler.on(op(performed), k);
                     } finally {
                         if (k.fresh) {
                             k.fresh = false;
@@ -241,7 +241,7 @@ abstract class Handling<F, A, R, E extends Exception> {
             };
         }
 
-        static final class Once<F, A, R, E extends Exception> extends Copyable implements Resume<F, R, E> {
+        static final class Once<F, A, B, E extends Exception> extends Copyable implements Resume<F, B, E> {
             boolean fresh = true;
 
             Once(Handling<?, ?, ?, ?> handling, Driver.Performed performed) {
@@ -250,48 +250,48 @@ abstract class Handling<F, A, R, E extends Exception> {
 
             @Override
             Copyable copy() {
-                var k = new Once<F, A, R, E>(handling, performed);
+                var k = new Once<F, A, B, E>(handling, performed);
                 k.fresh = fresh;
                 return k;
             }
 
             @Override
-            @SuppressWarnings("unchecked") // the handling of a Once<F, A, R, E> is a General<F, A, R, E>
-            public <X> R resume(Op<F, X, ?> op, X answer) throws E {
+            @SuppressWarnings("unchecked") // the handling of a Once<F, A, B, E> is a General<F, A, B, E>
+            public <X> B resume(Op<F, X, ?> op, X answer) throws E {
                 check(op);
                 if (!fresh) throw new IllegalStateException("one-shot: " + op + " resumed twice");
                 fresh = false;
-                var h = (General<F, A, R, E>) handling;
+                var h = (General<F, A, B, E>) handling;
                 return h.dispatch(h.resume(performed.performer(), answer));
             }
         }
     }
 
     /** A handler answering in place: in a loop, in constant stack. */
-    static final class Tail<F, A, R, E extends Exception> extends Handling<F, A, R, E> {
-        private final TailHandler<F, A, R> handler;
+    static final class Tail<F, A, B, E extends Exception> extends Handling<F, A, B, E> {
+        private final InPlace<F, A, B> handler;
 
-        Tail(TailHandler<F, A, R> handler, Body<F, A, E> body) {
+        Tail(InPlace<F, A, B> handler, Body<F, A, E> body) {
             super(body);
             this.handler = handler;
         }
 
-        private Tail(Tail<F, A, R, E> of) {
+        private Tail(Tail<F, A, B, E> of) {
             super(of);
             this.handler = of.handler;
         }
 
         @Override
-        Tail<F, A, R, E> copy() {
+        Tail<F, A, B, E> copy() {
             return new Tail<>(this);
         }
 
         @Override
-        R dispatch(Driver.Event event) throws E {
+        B dispatch(Driver.Event event) throws E {
             while (true) {
                 switch (event) {
                     case Driver.Returned returned -> {
-                        return handler.value(value(returned));
+                        return handler.ret(value(returned));
                     }
                     case Driver.Failed failed -> throw rethrown(failed);
                     case Driver.Ended ended -> throw ended();
@@ -299,11 +299,11 @@ abstract class Handling<F, A, R, E extends Exception> {
                         var k = new Given<F>(this, performed);
                         active = k;
                         try {
-                            handler.operation(op(performed), k);
+                            handler.answer(op(performed), k);
                         } finally {
                             if (!k.given) abandon(performed);
                         }
-                        if (!k.given) throw new IllegalStateException("a tail handler did not answer " + performed.op());
+                        if (!k.given) throw new IllegalStateException("an in-place handler did not answer " + performed.op());
                         event = resume(performed.performer(), k.value);
                     }
                 }
@@ -312,33 +312,33 @@ abstract class Handling<F, A, R, E extends Exception> {
     }
 
     /** A handler with a state, kept here: copied with a branch, so each resumption has its own. */
-    static final class Stateful<F, S, A, R, E extends Exception> extends Handling<F, A, R, E> {
-        private final StatefulHandler<F, S, A, R> handler;
+    static final class Stateful<F, S, A, B, E extends Exception> extends Handling<F, A, B, E> {
+        private final StatefulHandler<F, S, A, B> handler;
         private S state;
 
-        Stateful(StatefulHandler<F, S, A, R> handler, S initial, Body<F, A, E> body) {
+        Stateful(StatefulHandler<F, S, A, B> handler, S initial, Body<F, A, E> body) {
             super(body);
             this.handler = handler;
             this.state = initial;
         }
 
-        private Stateful(Stateful<F, S, A, R, E> of) {
+        private Stateful(Stateful<F, S, A, B, E> of) {
             super(of);
             this.handler = of.handler;
             this.state = of.state;
         }
 
         @Override
-        Stateful<F, S, A, R, E> copy() {
+        Stateful<F, S, A, B, E> copy() {
             return new Stateful<>(this);
         }
 
         @Override
-        R dispatch(Driver.Event event) throws E {
+        B dispatch(Driver.Event event) throws E {
             while (true) {
                 switch (event) {
                     case Driver.Returned returned -> {
-                        return handler.value(state, value(returned));
+                        return handler.ret(state, value(returned));
                     }
                     case Driver.Failed failed -> throw rethrown(failed);
                     case Driver.Ended ended -> throw ended();
@@ -346,7 +346,7 @@ abstract class Handling<F, A, R, E extends Exception> {
                         var k = new Given<F>(this, performed);
                         active = k;
                         try {
-                            state = handler.operation(state, op(performed), k);
+                            state = handler.answer(state, op(performed), k);
                         } finally {
                             if (!k.given) abandon(performed);
                         }
@@ -385,35 +385,35 @@ abstract class Handling<F, A, R, E extends Exception> {
     }
 
     /** A multi-shot handler: each resumption runs a copy of the rest, the rest itself kept as it was. */
-    static final class Multi<F, A, R, E extends Exception> extends Handling<F, A, R, E> {
-        private final MultiHandler<F, A, R, E> handler;
+    static final class Multi<F, A, B, E extends Exception> extends Handling<F, A, B, E> {
+        private final MultiHandler<F, A, B, E> handler;
 
-        Multi(MultiHandler<F, A, R, E> handler, Body<F, A, E> body) {
+        Multi(MultiHandler<F, A, B, E> handler, Body<F, A, E> body) {
             super(body);
             this.handler = handler;
         }
 
-        private Multi(Multi<F, A, R, E> of) {
+        private Multi(Multi<F, A, B, E> of) {
             super(of);
             this.handler = of.handler;
         }
 
         @Override
-        Multi<F, A, R, E> copy() {
+        Multi<F, A, B, E> copy() {
             return new Multi<>(this);
         }
 
         @Override
-        R dispatch(Driver.Event event) throws E {
+        B dispatch(Driver.Event event) throws E {
             return switch (event) {
-                case Driver.Returned returned -> handler.value(value(returned));
+                case Driver.Returned returned -> handler.ret(value(returned));
                 case Driver.Failed failed -> throw rethrown(failed);
                 case Driver.Ended ended -> throw ended();
                 case Driver.Performed performed -> {
-                    var k = new Many<F, A, R, E>(this, performed);
+                    var k = new Many<F, A, B, E>(this, performed);
                     active = k;
                     try {
-                        yield handler.operation(op(performed), k);
+                        yield handler.on(op(performed), k);
                     } finally {
                         if (!k.resumed) abandon(performed);
                     }
@@ -421,7 +421,7 @@ abstract class Handling<F, A, R, E extends Exception> {
             };
         }
 
-        static final class Many<F, A, R, E extends Exception> extends Copyable implements MultiResume<F, R, E> {
+        static final class Many<F, A, B, E extends Exception> extends Copyable implements MultiResume<F, B, E> {
             boolean resumed;
 
             Many(Handling<?, ?, ?, ?> handling, Driver.Performed performed) {
@@ -430,17 +430,17 @@ abstract class Handling<F, A, R, E extends Exception> {
 
             @Override
             Copyable copy() {
-                var k = new Many<F, A, R, E>(handling, performed);
+                var k = new Many<F, A, B, E>(handling, performed);
                 k.resumed = resumed;
                 return k;
             }
 
             @Override
-            @SuppressWarnings("unchecked") // the handling of a Many<F, A, R, E> is a Multi<F, A, R, E>
-            public <X> R resume(Op<F, X, ?> op, X answer) throws E {
+            @SuppressWarnings("unchecked") // the handling of a Many<F, A, B, E> is a Multi<F, A, B, E>
+            public <X> B resume(Op<F, X, ?> op, X answer) throws E {
                 check(op);
                 resumed = true;
-                var h = (Multi<F, A, R, E>) handling;
+                var h = (Multi<F, A, B, E>) handling;
                 var branch = copyChain(performed.performer(), h);
                 return h.dispatch(h.resume(branch, answer));
             }

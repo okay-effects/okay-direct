@@ -117,8 +117,8 @@ public sealed interface Async {
     }
 
     /** Both bodies at once, their values combined; the first failure thrown, the other body cancelled. */
-    static <A, B, R> R both(Effect<Async> async, Body<Async, A, ? extends Exception> a,
-            Body<Async, B, ? extends Exception> b, BiFunction<? super A, ? super B, ? extends R> combine) {
+    static <A, B, C> C both(Effect<Async> async, Body<Async, A, ? extends Exception> a,
+            Body<Async, B, ? extends Exception> b, BiFunction<? super A, ? super B, ? extends C> combine) {
         var ta = fork(async, a);
         var tb = fork(async, b);
         try {

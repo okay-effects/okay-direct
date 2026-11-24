@@ -16,7 +16,7 @@ import okay.direct.Effect;
 import okay.direct.Handler;
 import okay.direct.Later;
 import okay.direct.Resume;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 
 /**
  * ON THREADS: the body runs on a virtual thread of its own, and {@code perform} hands the operation to the
@@ -26,18 +26,18 @@ import okay.direct.TailHandler;
  */
 public final class ThreadEffects implements DetachedEffects {
     @Override
-    public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(Handler<F, A, B, E> handler, Body<F, A, E> body) throws E {
         return new Run<F, A, E>(body).handle(handler);
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(InPlace<F, A, B> handler, Body<F, A, E> body) throws E {
         return new Run<F, A, E>(body).handle(handler);
     }
 
     @Override
-    public <F, A, R, E extends Exception> CompletableFuture<R> start(DetachedHandler<F, A, R> handler, Body<F, A, E> body) {
-        var result = new CompletableFuture<R>();
+    public <F, A, B, E extends Exception> CompletableFuture<B> start(DetachedHandler<F, A, B> handler, Body<F, A, E> body) {
+        var result = new CompletableFuture<B>();
         new Run<F, A, E>(body).detached(handler, result);
         return result;
     }
@@ -131,12 +131,12 @@ public final class ThreadEffects implements DetachedEffects {
             return (F) p.op();
         }
 
-        <R> R handle(Handler<F, A, R, E> handler) throws E {
+        <B> B handle(Handler<F, A, B, E> handler) throws E {
             var p = next();
-            if (p == null) return handler.value(value);
-            var k = new Once<R>(p, handler);
+            if (p == null) return handler.ret(value);
+            var k = new Once<B>(p, handler);
             try {
-                return handler.operation(operation(p), k);
+                return handler.on(operation(p), k);
             } finally {
                 if (k.fresh) {
                     k.fresh = false;
@@ -145,12 +145,12 @@ public final class ThreadEffects implements DetachedEffects {
             }
         }
 
-        <R> R handle(TailHandler<F, A, R> handler) throws E {
+        <B> B handle(InPlace<F, A, B> handler) throws E {
             for (var p = next(); p != null; p = next()) {
-                var k = new Once<R>(p, null);
+                var k = new Once<B>(p, null);
                 var answered = false;
                 try {
-                    handler.operation(operation(p), k);
+                    handler.answer(operation(p), k);
                     answered = !k.fresh;
                 } finally {
                     if (k.fresh) {
@@ -158,9 +158,9 @@ public final class ThreadEffects implements DetachedEffects {
                         abandon(p);
                     }
                 }
-                if (!answered) throw new IllegalStateException("a tail handler did not answer " + p.op());
+                if (!answered) throw new IllegalStateException("an in-place handler did not answer " + p.op());
             }
-            return handler.value(value);
+            return handler.ret(value);
         }
 
         /** The body unwinds: Abandoned thrown at the perform it waits in; its end awaited. */
@@ -177,7 +177,7 @@ public final class ThreadEffects implements DetachedEffects {
          * rest the clause answers before it returns, on its own thread, goes on in this loop: awaits of what is
          * already there take no stack.
          */
-        <R> void detached(DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+        <B> void detached(DetachedHandler<F, A, B> handler, CompletableFuture<B> result) {
             while (true) {
                 Performed p;
                 try {
@@ -188,15 +188,15 @@ public final class ThreadEffects implements DetachedEffects {
                 }
                 if (p == null) {
                     try {
-                        result.complete(handler.value(value));
+                        result.complete(handler.ret(value));
                     } catch (Throwable t) {
                         result.completeExceptionally(t);
                     }
                     return;
                 }
-                var k = new Detached<R>(p, handler, result);
+                var k = new Detached<B>(p, handler, result);
                 try {
-                    handler.operation(operation(p), k);
+                    handler.on(operation(p), k);
                 } catch (Throwable t) {
                     // answered or not, the rest unwinds: the run has failed
                     if (k.left()) {
@@ -214,17 +214,17 @@ public final class ThreadEffects implements DetachedEffects {
             }
         }
 
-        private final class Detached<R> implements Later<F> {
+        private final class Detached<B> implements Later<F> {
             private static final int IN_CLAUSE = 0, LEFT = 1, ANSWERED_IN_CLAUSE = 2;
 
             private final Performed performed;
-            private final DetachedHandler<F, A, R> handler;
-            private final CompletableFuture<R> result;
+            private final DetachedHandler<F, A, B> handler;
+            private final CompletableFuture<B> result;
             private final AtomicBoolean taken = new AtomicBoolean();
             private final AtomicInteger state = new AtomicInteger(IN_CLAUSE);
             private final Thread clause = Thread.currentThread();
 
-            Detached(Performed performed, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+            Detached(Performed performed, DetachedHandler<F, A, B> handler, CompletableFuture<B> result) {
                 this.performed = performed;
                 this.handler = handler;
                 this.result = result;
@@ -268,18 +268,18 @@ public final class ThreadEffects implements DetachedEffects {
             }
         }
 
-        private final class Once<R> implements Resume<F, R, E>, Answer<F> {
+        private final class Once<B> implements Resume<F, B, E>, Answer<F> {
             private final Performed performed;
-            private final Handler<F, A, R, E> handler;
+            private final Handler<F, A, B, E> handler;
             private boolean fresh = true;
 
-            Once(Performed performed, Handler<F, A, R, E> handler) {
+            Once(Performed performed, Handler<F, A, B, E> handler) {
                 this.performed = performed;
                 this.handler = handler;
             }
 
             @Override
-            public <X> R resume(Op<F, X, ?> op, X value) throws E {
+            public <X> B resume(Op<F, X, ?> op, X value) throws E {
                 answer(op, value);
                 return handle(handler);
             }

@@ -14,7 +14,7 @@ import okay.direct.Effects;
 import okay.direct.Handler;
 import okay.direct.Implicit;
 import okay.direct.Resume;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.Answer;
 import okay.direct.std.Fail;
 import okay.direct.std.Reader;
@@ -83,12 +83,12 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
         // a handler of Fail that counts each failure in an outer state, and resumes nothing
         var result = State.run(fx, 0, state -> fx.handle(new Handler<Fail<String>, String, String, RuntimeException>() {
             @Override
-            public String value(String value) {
+            public String ret(String value) {
                 return value;
             }
 
             @Override
-            public String operation(Fail<String> op, Resume<Fail<String>, String, RuntimeException> k) {
+            public String on(Fail<String> op, Resume<Fail<String>, String, RuntimeException> k) {
                 State.put(state, State.get(state) + 1);
                 return switch (op) {
                     case Fail.Raise<String, ?> raise -> "recovered from " + raise.error();
@@ -102,12 +102,12 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     void aGeneralHandlerResumesAndWrapsTheRest() {
         var result = effects().handle(new Handler<Reader<Integer>, Integer, String, RuntimeException>() {
             @Override
-            public String value(Integer value) {
+            public String ret(Integer value) {
                 return "value " + value;
             }
 
             @Override
-            public String operation(Reader<Integer> op, Resume<Reader<Integer>, String, RuntimeException> k) {
+            public String on(Reader<Integer> op, Resume<Reader<Integer>, String, RuntimeException> k) {
                 return switch (op) {
                     case Reader.Ask<Integer> ask -> "[" + k.resume(ask, 20) + "]";
                 };
@@ -137,12 +137,12 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
         var fx = effects();
         assertThrows(IllegalStateException.class, () -> fx.handle(new Handler<Reader<Boolean>, Boolean, Boolean, RuntimeException>() {
             @Override
-            public Boolean value(Boolean value) {
+            public Boolean ret(Boolean value) {
                 return value;
             }
 
             @Override
-            public Boolean operation(Reader<Boolean> op, Resume<Reader<Boolean>, Boolean, RuntimeException> k) {
+            public Boolean on(Reader<Boolean> op, Resume<Reader<Boolean>, Boolean, RuntimeException> k) {
                 return switch (op) {
                     case Reader.Ask<Boolean> ask -> k.resume(ask, true) && k.resume(ask, false);
                 };
@@ -183,12 +183,12 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
         var own = new AtomicReference<Effect<Reader<Integer>>>();
         assertThrows(IllegalStateException.class, () -> fx.handle(new Handler<Reader<Integer>, Integer, Integer, RuntimeException>() {
             @Override
-            public Integer value(Integer value) {
+            public Integer ret(Integer value) {
                 return value;
             }
 
             @Override
-            public Integer operation(Reader<Integer> op, Resume<Reader<Integer>, Integer, RuntimeException> k) {
+            public Integer on(Reader<Integer> op, Resume<Reader<Integer>, Integer, RuntimeException> k) {
                 return Reader.ask(own.get()); // the clause runs outside the body: its own capability is not usable here
             }
         }, reader -> {
@@ -222,7 +222,7 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     }
 
     @Test
-    void aTailHandlerRunsInConstantStack() {
+    void anInPlaceHandlerRunsInConstantStack() {
         var result = State.run(effects(), 0, state -> {
             for (int i = 0; i < 100_000; i++) State.put(state, State.get(state) + 1);
             return "done";
@@ -230,16 +230,16 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
         assertEquals(new State.Final<>(100_000, "done"), result);
     }
 
-    /** a tail handler of Reader whose clause does what {@code clause} says */
-    static <A> TailHandler<Reader<Integer>, A, A> tailReader(java.util.function.BiConsumer<Reader.Ask<Integer>, Answer<Reader<Integer>>> clause) {
-        return new TailHandler<>() {
+    /** an in-place handler of Reader whose clause does what {@code clause} says */
+    static <A> InPlace<Reader<Integer>, A, A> tailReader(java.util.function.BiConsumer<Reader.Ask<Integer>, Answer<Reader<Integer>>> clause) {
+        return new InPlace<>() {
             @Override
-            public A value(A value) {
+            public A ret(A value) {
                 return value;
             }
 
             @Override
-            public void operation(Reader<Integer> op, Answer<Reader<Integer>> k) {
+            public void answer(Reader<Integer> op, Answer<Reader<Integer>> k) {
                 switch (op) {
                     case Reader.Ask<Integer> ask -> clause.accept(ask, k);
                 }
@@ -248,7 +248,7 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     }
 
     @Test
-    void aTailHandlersClauseThatThrowsEndsTheBodyAndHandleThrowsIt() {
+    void anInPlaceHandlersClauseThatThrowsEndsTheBodyAndHandleThrowsIt() {
         var fx = effects();
         var unwound = new AtomicBoolean();
         var thrown = assertThrows(IllegalArgumentException.class, () -> fx.handle(tailReader((ask, k) -> {
@@ -265,7 +265,7 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     }
 
     @Test
-    void aTailHandlersClauseThatDoesNotAnswerEndsTheBody() {
+    void anInPlaceHandlersClauseThatDoesNotAnswerEndsTheBody() {
         var fx = effects();
         var unwound = new AtomicBoolean();
         assertThrows(IllegalStateException.class, () -> fx.handle(tailReader((ask, k) -> {}), (Effect<Reader<Integer>> reader) -> {
@@ -279,7 +279,7 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     }
 
     @Test
-    void aTailHandlersClauseMayPerformAnOuterEffect() {
+    void anInPlaceHandlersClauseMayPerformAnOuterEffect() {
         var fx = effects();
         var result = State.run(fx, 7, state -> fx.handle(tailReader((ask, k) -> {
             State.put(state, State.get(state) + 1);   // the clause performs the outer State, every ask
@@ -289,21 +289,21 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
     }
 
     /**
-     * A general handler resuming inside a tail handler's body, 100 000 times, in constant stack: not of every
+     * A general handler resuming inside an in-place handler's body, 100 000 times, in constant stack: not of every
      * implementation (Espresso's general handler copies the rest at each resumption), so not a test here — an
      * implementation that has it calls this from a test of its own.
      */
-    protected void generalHandlerResumingInsideATailHandlersBodyInConstantStack() {
+    protected void generalHandlerResumingInsideAnInPlaceHandlersBodyInConstantStack() {
         var fx = effects();
         // an interceptor's shape: each ask passed on to the outer state, the rest resumed — a call deeper each time
         var result = State.run(fx, 0, state -> fx.handle(new Handler<Reader<Integer>, Integer, Integer, RuntimeException>() {
             @Override
-            public Integer value(Integer value) {
+            public Integer ret(Integer value) {
                 return value;
             }
 
             @Override
-            public Integer operation(Reader<Integer> op, Resume<Reader<Integer>, Integer, RuntimeException> k) {
+            public Integer on(Reader<Integer> op, Resume<Reader<Integer>, Integer, RuntimeException> k) {
                 return switch (op) {
                     case Reader.Ask<Integer> ask -> {
                         State.put(state, State.get(state) + 1);
@@ -371,12 +371,12 @@ public abstract class EffectsTck implements InterceptorTests, DelimitedTests, Em
         var result = State.run(fx, 100, COUNTER.in(() -> fx.handle(new Handler<Reader<Integer>, State.Final<Integer, Integer>,
                 State.Final<Integer, Integer>, RuntimeException>() {
             @Override
-            public State.Final<Integer, Integer> value(State.Final<Integer, Integer> value) {
+            public State.Final<Integer, Integer> ret(State.Final<Integer, Integer> value) {
                 return value;
             }
 
             @Override
-            public State.Final<Integer, Integer> operation(Reader<Integer> op,
+            public State.Final<Integer, Integer> on(Reader<Integer> op,
                     Resume<Reader<Integer>, State.Final<Integer, Integer>, RuntimeException> k) {
                 return switch (op) {
                     case Reader.Ask<Integer> ask -> k.resume(ask, State.get(COUNTER.get()));

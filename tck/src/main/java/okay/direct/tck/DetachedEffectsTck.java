@@ -20,7 +20,7 @@ import okay.direct.Effect;
 import okay.effect.Op;
 import okay.direct.Effects;
 import okay.direct.Later;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.std.Async;
 import okay.direct.std.Fail;
 import org.junit.jupiter.api.Test;
@@ -65,12 +65,12 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
 
     /** Prices asked of an asynchronous service, awaited: no thread waits. */
     static <A> A pricesFrom(Effects fx, Effect<Async> async, Map<String, Integer> table, Body<Prices, A, RuntimeException> body) {
-        return fx.handle(new TailHandler<Prices, A, A>() {
-            public A value(A result) {
+        return fx.handle(new InPlace<Prices, A, A>() {
+            public A ret(A result) {
                 return result;
             }
 
-            public void operation(Prices op, Answer<Prices> k) {
+            public void answer(Prices op, Answer<Prices> k) {
                 switch (op) {
                     case Prices.Price p -> k.answer(p, Async.await(async, later(Optional.ofNullable(table.get(p.item())))));
                 }
@@ -99,11 +99,11 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
         var kept = new AtomicReference<Later<Ask>>();
         var asked = new AtomicReference<Ask.Question>();
         var result = effects().start(new DetachedHandler<Ask, Integer, Integer>() {
-            public Integer value(Integer value) {
+            public Integer ret(Integer value) {
                 return value;
             }
 
-            public void operation(Ask op, Later<Ask> k) {
+            public void on(Ask op, Later<Ask> k) {
                 switch (op) {
                     case Ask.Question q -> {
                         asked.set(q);
@@ -122,11 +122,11 @@ public abstract class DetachedEffectsTck extends EffectsTck implements AsyncTest
         var cleaned = new AtomicBoolean();
         var kept = new AtomicReference<Later<Ask>>();
         var result = effects().start(new DetachedHandler<Ask, Integer, Integer>() {
-            public Integer value(Integer value) {
+            public Integer ret(Integer value) {
                 return value;
             }
 
-            public void operation(Ask op, Later<Ask> k) {
+            public void on(Ask op, Later<Ask> k) {
                 kept.set(k);
             }
         }, (Effect<Ask> ask) -> {

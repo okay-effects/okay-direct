@@ -17,7 +17,7 @@ import okay.direct.Effect;
 import okay.direct.Handler;
 import okay.direct.Later;
 import okay.direct.Resume;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 
 /**
  * ON HOTSPOT'S CONTINUATIONS, {@code jdk.internal.vm.Continuation}: the body runs in a continuation of a scope of
@@ -29,18 +29,18 @@ import okay.direct.TailHandler;
  */
 public final class LoomEffects implements DetachedEffects {
     @Override
-    public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(Handler<F, A, B, E> handler, Body<F, A, E> body) throws E {
         return new Run<F, A, E>(body).handle(handler);
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(InPlace<F, A, B> handler, Body<F, A, E> body) throws E {
         return new Run<F, A, E>(body).inPlace(handler);
     }
 
     @Override
-    public <F, A, R, E extends Exception> CompletableFuture<R> start(DetachedHandler<F, A, R> handler, Body<F, A, E> body) {
-        var result = new CompletableFuture<R>();
+    public <F, A, B, E extends Exception> CompletableFuture<B> start(DetachedHandler<F, A, B> handler, Body<F, A, E> body) {
+        var result = new CompletableFuture<B>();
         new Run<F, A, E>(body).detached(handler, result);
         return result;
     }
@@ -50,7 +50,7 @@ public final class LoomEffects implements DetachedEffects {
         return "LoomEffects";
     }
 
-    /** One operation in this many of a tail handler yields, the others answered in place (see inPlaceSinceYield). */
+    /** One operation in this many of an in-place handler yields, the others answered in place (see inPlaceSinceYield). */
     private static final int YIELD_EVERY = 256;
 
     /** An answer that is a failure, to be thrown at the perform. */
@@ -70,9 +70,9 @@ public final class LoomEffects implements DetachedEffects {
         private Op<F, ?, ?> pending;
         private Object answer;
         private boolean abandoned;
-        /** ANSWERED IN PLACE: a tail handler's clause, called at the perform on the body's own stack — no yield, no
+        /** ANSWERED IN PLACE: an in-place handler's clause, called at the perform on the body's own stack — no yield, no
          * continuation switched; null for a handler that takes the rest */
-        private TailHandler<F, A, ?> tail;
+        private InPlace<F, A, ?> tail;
         /** the bindings outside the body, which the clause runs with */
         private Object outside;
         private boolean inClause;
@@ -130,7 +130,7 @@ public final class LoomEffects implements DetachedEffects {
         }
 
         /**
-         * The operation given to the tail handler's clause here, at the perform: the clause runs with the bindings of
+         * The operation given to the in-place handler's clause here, at the perform: the clause runs with the bindings of
          * outside the body (switched only if the body has bound others), its answer returned at once. Usable as a yield
          * is: only where the body's scope is mounted (on its thread, in it, while it runs) and not from the clause
          * itself. A clause that throws, or does not answer, ends the body as a dropped rest does: Abandoned unwinds it,
@@ -145,7 +145,7 @@ public final class LoomEffects implements DetachedEffects {
             var switched = inside != outside;
             if (switched) Bindings.restore(outside);
             try {
-                tail.operation(operation(), inPlaceAnswer);
+                tail.answer(operation(), inPlaceAnswer);
             } catch (Throwable t) {
                 failure = t;
                 abandoned = true;
@@ -155,7 +155,7 @@ public final class LoomEffects implements DetachedEffects {
                 if (switched) Bindings.restore(inside);
             }
             if (!answered) {
-                failure = new IllegalStateException("a tail handler did not answer " + op);
+                failure = new IllegalStateException("an in-place handler did not answer " + op);
                 abandoned = true;
                 throw new Abandoned(this);
             }
@@ -165,8 +165,8 @@ public final class LoomEffects implements DetachedEffects {
         }
 
         /** The body run with its operations answered in place, at the perform, but one in YIELD_EVERY: that one
-         * yields, and is answered by the tail handler's loop as every operation was before. */
-        <R> R inPlace(TailHandler<F, A, R> handler) throws E {
+         * yields, and is answered by the in-place handler's loop as every operation was before. */
+        <B> B inPlace(InPlace<F, A, B> handler) throws E {
             tail = handler;
             outside = Bindings.current();
             return handle(handler); // the loop answers the operations that yield; the rest are answered at the perform
@@ -191,11 +191,11 @@ public final class LoomEffects implements DetachedEffects {
             return (F) pending;
         }
 
-        <R> R handle(Handler<F, A, R, E> handler) throws E {
-            if (!next()) return handler.value(value);
-            var k = new Once<R>(pending, handler);
+        <B> B handle(Handler<F, A, B, E> handler) throws E {
+            if (!next()) return handler.ret(value);
+            var k = new Once<B>(pending, handler);
             try {
-                return handler.operation(operation(), k);
+                return handler.on(operation(), k);
             } finally {
                 if (k.fresh) {
                     k.fresh = false;
@@ -204,13 +204,13 @@ public final class LoomEffects implements DetachedEffects {
             }
         }
 
-        <R> R handle(TailHandler<F, A, R> handler) throws E {
+        <B> B handle(InPlace<F, A, B> handler) throws E {
             while (next()) {
                 var op = pending;
-                var k = new Once<R>(op, null);
+                var k = new Once<B>(op, null);
                 var answered = false;
                 try {
-                    handler.operation(operation(), k);
+                    handler.answer(operation(), k);
                     answered = !k.fresh;
                 } finally {
                     if (k.fresh) {
@@ -218,9 +218,9 @@ public final class LoomEffects implements DetachedEffects {
                         abandon();
                     }
                 }
-                if (!answered) throw new IllegalStateException("a tail handler did not answer " + op);
+                if (!answered) throw new IllegalStateException("an in-place handler did not answer " + op);
             }
-            return handler.value(value);
+            return handler.ret(value);
         }
 
         /** The body unwinds: Abandoned thrown at the perform it is suspended at. */
@@ -244,7 +244,7 @@ public final class LoomEffects implements DetachedEffects {
          * the clause answers before it returns, on its own thread, goes on in this loop: awaits of what is already
          * there take no stack.
          */
-        <R> void detached(DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+        <B> void detached(DetachedHandler<F, A, B> handler, CompletableFuture<B> result) {
             while (true) {
                 boolean more;
                 try {
@@ -255,15 +255,15 @@ public final class LoomEffects implements DetachedEffects {
                 }
                 if (!more) {
                     try {
-                        result.complete(handler.value(value));
+                        result.complete(handler.ret(value));
                     } catch (Throwable t) {
                         result.completeExceptionally(t);
                     }
                     return;
                 }
-                var k = new Detached<R>(pending, handler, result);
+                var k = new Detached<B>(pending, handler, result);
                 try {
-                    handler.operation(operation(), k);
+                    handler.on(operation(), k);
                 } catch (Throwable t) {
                     // answered or not, the rest unwinds: the run has failed
                     if (k.left() || k.take()) abandon();
@@ -274,17 +274,17 @@ public final class LoomEffects implements DetachedEffects {
             }
         }
 
-        private final class Detached<R> implements Later<F> {
+        private final class Detached<B> implements Later<F> {
             private static final int IN_CLAUSE = 0, LEFT = 1, ANSWERED_IN_CLAUSE = 2;
 
             private final Op<F, ?, ?> op;
-            private final DetachedHandler<F, A, R> handler;
-            private final CompletableFuture<R> result;
+            private final DetachedHandler<F, A, B> handler;
+            private final CompletableFuture<B> result;
             private final AtomicBoolean taken = new AtomicBoolean();
             private final AtomicInteger state = new AtomicInteger(IN_CLAUSE);
             private final Thread clause = Thread.currentThread();
 
-            Detached(Op<F, ?, ?> op, DetachedHandler<F, A, R> handler, CompletableFuture<R> result) {
+            Detached(Op<F, ?, ?> op, DetachedHandler<F, A, B> handler, CompletableFuture<B> result) {
                 this.op = op;
                 this.handler = handler;
                 this.result = result;
@@ -328,18 +328,18 @@ public final class LoomEffects implements DetachedEffects {
             }
         }
 
-        private final class Once<R> implements Resume<F, R, E>, Answer<F> {
+        private final class Once<B> implements Resume<F, B, E>, Answer<F> {
             private final Op<F, ?, ?> op;
-            private final Handler<F, A, R, E> handler;
+            private final Handler<F, A, B, E> handler;
             private boolean fresh = true;
 
-            Once(Op<F, ?, ?> op, Handler<F, A, R, E> handler) {
+            Once(Op<F, ?, ?> op, Handler<F, A, B, E> handler) {
                 this.op = op;
                 this.handler = handler;
             }
 
             @Override
-            public <X> R resume(Op<F, X, ?> op, X value) throws E {
+            public <X> B resume(Op<F, X, ?> op, X value) throws E {
                 answer(op, value);
                 return handle(handler);
             }

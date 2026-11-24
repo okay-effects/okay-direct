@@ -24,12 +24,12 @@ public sealed interface Choose {
     static <A, E extends Exception> List<A> all(MultiEffects effects, Body<Choose, A, E> body) throws E {
         return effects.handle(new MultiHandler<Choose, A, List<A>, E>() {
             @Override
-            public List<A> value(A value) {
+            public List<A> ret(A value) {
                 return List.of(value);
             }
 
             @Override
-            public List<A> operation(Choose op, MultiResume<Choose, List<A>, E> k) throws E {
+            public List<A> on(Choose op, MultiResume<Choose, List<A>, E> k) throws E {
                 return switch (op) {
                     case Flip flip -> {
                         // each list made after both resumptions: a branch forked inside the second shares this

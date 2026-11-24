@@ -15,12 +15,12 @@ class Watched implements Effects {
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(Handler<F, A, B, E> handler, Body<F, A, E> body) throws E {
         return effects.handle(handler, (Effect<F> effect) -> body.run(watched(effect)));
     }
 
     @Override
-    public <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body) throws E {
+    public <F, A, B, E extends Exception> B handle(InPlace<F, A, B> handler, Body<F, A, E> body) throws E {
         return effects.handle(handler, (Effect<F> effect) -> body.run(watched(effect)));
     }
 
@@ -55,8 +55,8 @@ class Watched implements Effects {
         }
 
         @Override
-        public <F, A, R, E extends Exception> java.util.concurrent.CompletableFuture<R> start(
-                DetachedHandler<F, A, R> handler, Body<F, A, E> body) {
+        public <F, A, B, E extends Exception> java.util.concurrent.CompletableFuture<B> start(
+                DetachedHandler<F, A, B> handler, Body<F, A, E> body) {
             return effects.start(handler, (Effect<F> effect) -> body.run(watched(effect)));
         }
     }

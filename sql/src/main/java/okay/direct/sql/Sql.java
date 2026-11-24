@@ -71,7 +71,7 @@ public sealed interface Sql {
     static Effect<Sql> readOnly(Effect<Sql> sql) {
         return Interceptor.intercept(sql, new Interceptor<Sql, Sql>() {
             @Override
-            public void operation(Sql op, Pass<Sql> pass, Answer<Sql> k) {
+            public void on(Sql op, Pass<Sql> pass, Answer<Sql> k) {
                 switch (op) {
                     case Query<?> query -> passed(query, pass, k);
                     case Update update -> throw new Refused("read only: " + update.text());
@@ -84,7 +84,7 @@ public sealed interface Sql {
     static Effect<Sql> logged(Effect<Sql> sql, Consumer<String> log) {
         return Interceptor.intercept(sql, new Interceptor<Sql, Sql>() {
             @Override
-            public void operation(Sql op, Pass<Sql> pass, Answer<Sql> k) {
+            public void on(Sql op, Pass<Sql> pass, Answer<Sql> k) {
                 switch (op) {
                     case Query<?> query -> {
                         log.accept(query.text() + " " + query.parameters());

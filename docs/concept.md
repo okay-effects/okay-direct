@@ -31,7 +31,7 @@ log, an audit are different handlers of the same program.
    so the order is in the type.
 4. **One source of truth.** Operations, effects and rows are defined once. Every style below is a projection of them;
    no style has its own definition of an effect, and the conversions between styles are total.
-5. **Handlers by what they do with the rest.** In place (`TailHandler`, constant stack); with a one-shot `k`
+5. **Handlers by what they do with the rest.** In place (`InPlace`, constant stack); with a one-shot `k`
    (`Handler`); with a state (`StatefulHandler`); with a multi-shot `k` (`MultiHandler`). How many shots is a TYPE
    (`MultiEffects`), never a flag checked late.
 6. **A capability lives while its body runs.** Used after its handler returned, on another thread, or in its own

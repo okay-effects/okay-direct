@@ -43,9 +43,9 @@ static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> 
 
 // a handler (here in-memory, as in a test; in production the host passes a client of the price service)
 static <A> A pricesFrom(Effects fx, Map<String, Integer> table, Body<Prices, A, RuntimeException> body) {
-    return fx.handle(new TailHandler<Prices, A, A>() {
-        public A value(A result) { return result; }
-        public void operation(Prices op, Answer<Prices> k) {
+    return fx.handle(new InPlace<Prices, A, A>() {
+        public A ret(A result) { return result; }
+        public void answer(Prices op, Answer<Prices> k) {
             switch (op) {
                 case Prices.Price p -> k.answer(p, Optional.ofNullable(table.get(p.item())));
             }
@@ -64,7 +64,7 @@ Rows (master, 0.1.1-SNAPSHOT): a program needing several effects takes ONE param
 `Program<A, R>`, `Fx.handle`, `State.run(0, p)`, `Fail.attempt(p)`, `Fx.run(fx, p)` for `Pure`; errors are `Fail` in the
 row (`Fail.catching`/`Fail.rethrow`). The picture behind it: [docs/concept.md](docs/concept.md).
 
-Handler kinds: `TailHandler` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
+Handler kinds: `InPlace` (answers in place, constant stack), `Handler` (`k` a one-shot `Resume`: resume or not,
 wrap the result), `StatefulHandler` (state per resumption), `MultiHandler` (`MultiResume`, only on a `MultiEffects`).
 Standard effects in `okay.direct.std`: `State`, `Reader`, `Fail`, `Choose`, `Trail`, `Emits`, `Async`, `VirtualClock`,
 `Channel`, `Delimited`, `Reflection`; `okay-direct-sql` has `Transaction`/`Sql`, `okay-direct-otel` `Tracing.traced`.
@@ -93,8 +93,8 @@ sealed interface Pay {
 }
 static <A, E extends Exception> A bank(Effects fx, Audit.VaultBody<Pay, A, E> body) throws E {
     return Audit.handle(fx, new Audit.Handler<Pay, A, A>() {
-        public A value(A value) { return value; }
-        public void operation(Pay op, Answer<Audited<Pay>> k) {
+        public A ret(A value) { return value; }
+        public void answer(Pay op, Answer<Audited<Pay>> k) {
             switch (op) { case Pay.Transfer t -> k.answer(t, "sent " + t.amount() + " to " + t.to()); }
         }
     }, body);

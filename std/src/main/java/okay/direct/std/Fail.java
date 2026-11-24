@@ -37,12 +37,12 @@ public sealed interface Fail<E> {
     static <E, A, T extends Exception> Outcome<E, A> attempt(Effects effects, Body<Fail<E>, A, T> body) throws T {
         return effects.handle(new Handler<Fail<E>, A, Outcome<E, A>, T>() {
             @Override
-            public Outcome<E, A> value(A value) {
+            public Outcome<E, A> ret(A value) {
                 return new Success<>(value);
             }
 
             @Override
-            public Outcome<E, A> operation(Fail<E> op, Resume<Fail<E>, Outcome<E, A>, T> k) {
+            public Outcome<E, A> on(Fail<E> op, Resume<Fail<E>, Outcome<E, A>, T> k) {
                 return switch (op) {
                     case Raise<E, ?> raise -> new Failure<>(raise.error());
                 };

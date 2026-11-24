@@ -30,31 +30,31 @@ package object scala2 {
   type Sql = okay.direct.sql.Sql
 
   /** The body, run with E's capability, handled by `h`. */
-  def handle[E, A, R](h: Handler[E, A, R])(body: Effect[E] => A)(implicit fx: Effects): R =
-    fx.handle[E, A, R, RuntimeException](new okay.direct.Handler[E, A, R, RuntimeException] {
-      def value(a: A): R = h.value(a)
-      def operation(op: E, k: okay.direct.Resume[E, R, RuntimeException]): R =
-        h(op, new Resume[E, R] { def apply[X](o: Op[E, X], x: X): R = k.resume(o, x) })
+  def handle[E, A, B](h: Handler[E, A, B])(body: Effect[E] => A)(implicit fx: Effects): B =
+    fx.handle[E, A, B, RuntimeException](new okay.direct.Handler[E, A, B, RuntimeException] {
+      def ret(a: A): B = h.ret(a)
+      def on(op: E, k: okay.direct.Resume[E, B, RuntimeException]): B =
+        h.on(op, new Resume[E, B] { def apply[X](o: Op[E, X], x: X): B = k.resume(o, x) })
     }, (effect: Effect[E]) => body(effect))
 
-  def handle[E, A, R](h: TailHandler[E, A, R])(body: Effect[E] => A)(implicit fx: Effects): R =
-    fx.handle[E, A, R, RuntimeException](new okay.direct.TailHandler[E, A, R] {
-      def value(a: A): R = h.value(a)
-      def operation(op: E, k: okay.direct.Answer[E]): Unit =
-        h(op, new Answer[E] { def apply[X](o: Op[E, X], x: X): Unit = k.answer(o, x) })
+  def handle[E, A, B](h: InPlace[E, A, B])(body: Effect[E] => A)(implicit fx: Effects): B =
+    fx.handle[E, A, B, RuntimeException](new okay.direct.InPlace[E, A, B] {
+      def ret(a: A): B = h.ret(a)
+      def answer(op: E, k: okay.direct.Answer[E]): Unit =
+        h.answer(op, new Answer[E] { def apply[X](o: Op[E, X], x: X): Unit = k.answer(o, x) })
     }, (effect: Effect[E]) => body(effect))
 
-  def handle[E, S, A, R](h: StatefulHandler[E, S, A, R], initial: S)(body: Effect[E] => A)(implicit fx: Effects): R =
-    fx.handle[E, S, A, R, RuntimeException](new okay.direct.StatefulHandler[E, S, A, R] {
-      def value(s: S, a: A): R = h.value(s, a)
-      def operation(s: S, op: E, k: okay.direct.Answer[E]): S =
-        h(s, op, new Answer[E] { def apply[X](o: Op[E, X], x: X): Unit = k.answer(o, x) })
+  def handle[E, S, A, B](h: StatefulHandler[E, S, A, B], initial: S)(body: Effect[E] => A)(implicit fx: Effects): B =
+    fx.handle[E, S, A, B, RuntimeException](new okay.direct.StatefulHandler[E, S, A, B] {
+      def ret(s: S, a: A): B = h.ret(s, a)
+      def answer(s: S, op: E, k: okay.direct.Answer[E]): S =
+        h.answer(s, op, new Answer[E] { def apply[X](o: Op[E, X], x: X): Unit = k.answer(o, x) })
     }, initial, new okay.direct.Body[E, A, RuntimeException] { def run(effect: Effect[E]): A = body(effect) })
 
-  def handle[E, A, R](h: MultiHandler[E, A, R])(body: Effect[E] => A)(implicit fx: MultiEffects): R =
-    fx.handle[E, A, R, RuntimeException](new okay.direct.MultiHandler[E, A, R, RuntimeException] {
-      def value(a: A): R = h.value(a)
-      def operation(op: E, k: okay.direct.MultiResume[E, R, RuntimeException]): R =
-        h(op, new Resume[E, R] { def apply[X](o: Op[E, X], x: X): R = k.resume(o, x) })
+  def handle[E, A, B](h: MultiHandler[E, A, B])(body: Effect[E] => A)(implicit fx: MultiEffects): B =
+    fx.handle[E, A, B, RuntimeException](new okay.direct.MultiHandler[E, A, B, RuntimeException] {
+      def ret(a: A): B = h.ret(a)
+      def on(op: E, k: okay.direct.MultiResume[E, B, RuntimeException]): B =
+        h.on(op, new Resume[E, B] { def apply[X](o: Op[E, X], x: X): B = k.resume(o, x) })
     }, (effect: Effect[E]) => body(effect))
 }

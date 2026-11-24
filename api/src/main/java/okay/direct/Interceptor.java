@@ -15,7 +15,7 @@ import okay.effect.Op;
  */
 @FunctionalInterface
 public interface Interceptor<C, F> {
-    void operation(C op, Pass<F> pass, Answer<F> k);
+    void on(C op, Pass<F> pass, Answer<F> k);
 
     /** The operation passed on, past the interceptor, to the capability it guards. */
     interface Pass<F> {

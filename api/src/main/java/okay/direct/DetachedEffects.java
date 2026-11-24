@@ -18,5 +18,5 @@ public interface DetachedEffects extends Effects {
      * thread that resumed it last — or exceptionally with what the body or a clause threw, or with a
      * {@code CancellationException} when the rest is dropped.
      */
-    <F, A, R, E extends Exception> CompletableFuture<R> start(DetachedHandler<F, A, R> handler, Body<F, A, E> body);
+    <F, A, B, E extends Exception> CompletableFuture<B> start(DetachedHandler<F, A, B> handler, Body<F, A, E> body);
 }

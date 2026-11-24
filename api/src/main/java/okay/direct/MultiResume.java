@@ -10,4 +10,4 @@ package okay.direct;
  * an object a compiler makes before an operation and fills after it: Scala 3's {@code List(flip, flip)} makes its
  * varargs array first, so every branch fills the one array; bind the answers to locals first.
  */
-public interface MultiResume<F, R, E extends Exception> extends Resume<F, R, E> {}
+public interface MultiResume<F, B, E extends Exception> extends Resume<F, B, E> {}

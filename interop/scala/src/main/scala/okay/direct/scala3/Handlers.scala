@@ -16,57 +16,57 @@ import okay.direct.{Effect, Effects, MultiEffects, MultiResume, Resume}
  */
 
 /** A handler of E: the body's value to the result, and an operation with `k`, the rest of the body: ONE-SHOT. */
-trait Handler[E, A, R]:
-  def value(a: A): R
-  def apply[X](op: E & Op[E, X], k: X => R): R
+trait Handler[E, A, B]:
+  def ret(a: A): B
+  def on[X](op: E & Op[E, X], k: X => B): B
 
 /** A handler of E that may resume `k` any number of times: runs only on a `MultiEffects`. */
-trait MultiHandler[E, A, R]:
-  def value(a: A): R
-  def apply[X](op: E & Op[E, X], k: X => R): R
+trait MultiHandler[E, A, B]:
+  def ret(a: A): B
+  def on[X](op: E & Op[E, X], k: X => B): B
 
 /** A handler of E answering every operation in place: in constant stack. */
-trait TailHandler[E, A, R]:
-  def value(a: A): R
-  def apply[X](op: E & Op[E, X]): X
+trait InPlace[E, A, B]:
+  def ret(a: A): B
+  def answer[X](op: E & Op[E, X]): X
 
 /**
  * A handler of E with a state kept by the implementation: each operation answered in place with the state of its
  * time, returning the answer and the state to go on with. Under a multi-shot handler further out, each resumption
  * has its own: a state inside a choice is each branch's, one outside is threaded through them.
  */
-trait StatefulHandler[E, S, A, R]:
-  def value(s: S, a: A): R
-  def apply[X](s: S, op: E & Op[E, X]): (X, S)
+trait StatefulHandler[E, S, A, B]:
+  def ret(s: S, a: A): B
+  def answer[X](s: S, op: E & Op[E, X]): (X, S)
 
 /** The body, run with E's capability in scope, handled by `h`. */
-def handle[E, A, R](h: Handler[E, A, R])(body: Effect[E] ?=> A)(using fx: Effects): R =
+def handle[E, A, B](h: Handler[E, A, B])(body: Effect[E] ?=> A)(using fx: Effects): B =
   fx.handle(
-    new okay.direct.Handler[E, A, R, RuntimeException]:
-      def value(a: A): R = h.value(a)
-      def operation(op: E, k: Resume[E, R, RuntimeException]): R = op match
-        case o: (E & Op[E, x]) @unchecked => h(o, (a: x) => k.resume(o, a))
+    new okay.direct.Handler[E, A, B, RuntimeException]:
+      def ret(a: A): B = h.ret(a)
+      def on(op: E, k: Resume[E, B, RuntimeException]): B = op match
+        case o: (E & Op[E, x]) @unchecked => h.on(o, (a: x) => k.resume(o, a))
     ,
     (effect: Effect[E]) => body(using effect)
   )
 
-def handle[E, A, R](h: TailHandler[E, A, R])(body: Effect[E] ?=> A)(using fx: Effects): R =
+def handle[E, A, B](h: InPlace[E, A, B])(body: Effect[E] ?=> A)(using fx: Effects): B =
   fx.handle(
-    new okay.direct.TailHandler[E, A, R]:
-      def value(a: A): R = h.value(a)
-      def operation(op: E, k: okay.direct.Answer[E]): Unit = op match
-        case o: (E & Op[E, x]) @unchecked => k.answer(o, h(o))
+    new okay.direct.InPlace[E, A, B]:
+      def ret(a: A): B = h.ret(a)
+      def answer(op: E, k: okay.direct.Answer[E]): Unit = op match
+        case o: (E & Op[E, x]) @unchecked => k.answer(o, h.answer(o))
     ,
     (effect: Effect[E]) => body(using effect)
   )
 
-def handle[E, S, A, R](h: StatefulHandler[E, S, A, R], initial: S)(body: Effect[E] ?=> A)(using fx: Effects): R =
-  fx.handle[E, S, A, R, RuntimeException](
-    new okay.direct.StatefulHandler[E, S, A, R]:
-      def value(s: S, a: A): R = h.value(s, a)
-      def operation(s: S, op: E, k: okay.direct.Answer[E]): S = op match
+def handle[E, S, A, B](h: StatefulHandler[E, S, A, B], initial: S)(body: Effect[E] ?=> A)(using fx: Effects): B =
+  fx.handle[E, S, A, B, RuntimeException](
+    new okay.direct.StatefulHandler[E, S, A, B]:
+      def ret(s: S, a: A): B = h.ret(s, a)
+      def answer(s: S, op: E, k: okay.direct.Answer[E]): S = op match
         case o: (E & Op[E, x]) @unchecked =>
-          val (answer, next) = h(s, o)
+          val (answer, next) = h.answer(s, o)
           k.answer(o, answer)
           next
     ,
@@ -74,12 +74,12 @@ def handle[E, S, A, R](h: StatefulHandler[E, S, A, R], initial: S)(body: Effect[
     (effect: Effect[E]) => body(using effect)
   )
 
-def handle[E, A, R](h: MultiHandler[E, A, R])(body: Effect[E] ?=> A)(using fx: MultiEffects): R =
+def handle[E, A, B](h: MultiHandler[E, A, B])(body: Effect[E] ?=> A)(using fx: MultiEffects): B =
   fx.handle(
-    new okay.direct.MultiHandler[E, A, R, RuntimeException]:
-      def value(a: A): R = h.value(a)
-      def operation(op: E, k: MultiResume[E, R, RuntimeException]): R = op match
-        case o: (E & Op[E, x]) @unchecked => h(o, (a: x) => k.resume(o, a))
+    new okay.direct.MultiHandler[E, A, B, RuntimeException]:
+      def ret(a: A): B = h.ret(a)
+      def on(op: E, k: MultiResume[E, B, RuntimeException]): B = op match
+        case o: (E & Op[E, x]) @unchecked => h.on(o, (a: x) => k.resume(o, a))
     ,
     (effect: Effect[E]) => body(using effect)
   )

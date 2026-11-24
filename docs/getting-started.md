@@ -145,7 +145,7 @@ static int total(Effect<Prices> prices, Effect<Fail<String>> fail, List<String> 
 ```
 
 **The handlers**, written apart. A handler is an exhaustive `switch` answering through `k`, the operation the witness
-of its answer's type; a `TailHandler` answers in place. An interceptor is a handler standing on top of a capability:
+of its answer's type; an `InPlace` answers in place. An interceptor is a handler standing on top of a capability:
 
 ```java
 // an external price service, asynchronous — an HTTP client, a gRPC stub; empty for an unknown item
@@ -155,9 +155,9 @@ interface PriceService {
 
 // a handler: what Price means — asked of the service, its answer waited for
 static <A> A pricesFrom(Effects fx, PriceService service, Body<Prices, A, RuntimeException> body) {
-    return fx.handle(new TailHandler<Prices, A, A>() {
-        public A value(A result) { return result; }
-        public void operation(Prices op, Answer<Prices> k) {
+    return fx.handle(new InPlace<Prices, A, A>() {
+        public A ret(A result) { return result; }
+        public void answer(Prices op, Answer<Prices> k) {
             switch (op) {
                 case Prices.Price p -> k.answer(p, service.quote(p.item()).join());
             }
@@ -221,7 +221,7 @@ What is unusual here:
   a handler of prices there is no capability to call it with: it does not compile.
 
 The imports: `java.util.Optional`, `java.util.concurrent.{CompletableFuture, TimeUnit}`, `okay.effect.Op`, `okay.direct.{Answer, Body, Effect,
-Effects, Interceptor, TailHandler}`,
+Effects, Interceptor, InPlace}`,
 `okay.direct.loom.LoomEffects`, `okay.direct.std.{Fail, Trail}`. A handler that resumes the rest, or does not, or wraps
 what it returns, is a general `Handler` ([Guide](guide.md#handling-the-four-kinds-of-handler)).
 

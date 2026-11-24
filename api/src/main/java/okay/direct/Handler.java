@@ -5,9 +5,9 @@ package okay.direct;
  * ONE-SHOT: resumed at most once. A handler resuming more than once is a {@link MultiHandler}. {@code E} is what
  * the body throws: resuming it may throw that.
  */
-public interface Handler<F, A, R, E extends Exception> {
-    R value(A value);
+public interface Handler<F, A, B, E extends Exception> {
+    B ret(A value);
 
     /** {@code k} not resumed: the rest is abandoned, and unwinds (see {@link Abandoned}). */
-    R operation(F op, Resume<F, R, E> k) throws E;
+    B on(F op, Resume<F, B, E> k) throws E;
 }

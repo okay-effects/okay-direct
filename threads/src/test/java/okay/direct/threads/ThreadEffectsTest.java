@@ -10,9 +10,9 @@ class ThreadEffectsTest extends DetachedEffectsTck {
         return new ThreadEffects();
     }
 
-    /** an interceptor's shape under a tail handler, in constant stack */
+    /** an interceptor's shape under an in-place handler, in constant stack */
     @Test
-    void aGeneralHandlerResumingInsideATailHandlersBodyRunsInConstantStack() {
-        generalHandlerResumingInsideATailHandlersBodyInConstantStack();
+    void aGeneralHandlerResumingInsideAnInPlaceHandlersBodyRunsInConstantStack() {
+        generalHandlerResumingInsideAnInPlaceHandlersBodyInConstantStack();
     }
 }

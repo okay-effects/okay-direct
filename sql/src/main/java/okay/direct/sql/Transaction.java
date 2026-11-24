@@ -9,7 +9,7 @@ import javax.sql.DataSource;
 import okay.direct.Answer;
 import okay.direct.Body;
 import okay.direct.Effects;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 
 /**
  * A TRANSACTION: the handler of {@link Sql}. It opens a connection, runs the body, its statements on it, and commits
@@ -51,15 +51,15 @@ public final class Transaction {
         }
     }
 
-    private static <A> TailHandler<Sql, A, A> handler(Connection connection) {
-        return new TailHandler<>() {
+    private static <A> InPlace<Sql, A, A> handler(Connection connection) {
+        return new InPlace<>() {
             @Override
-            public A value(A value) {
+            public A ret(A value) {
                 return value;
             }
 
             @Override
-            public void operation(Sql op, Answer<Sql> k) {
+            public void answer(Sql op, Answer<Sql> k) {
                 switch (op) {
                     case Sql.Query<?> query -> answered(connection, query, k);
                     case Sql.Update update -> k.answer(update, changed(connection, update));

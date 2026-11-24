@@ -17,8 +17,8 @@ object Pay {
   def bank[A](balance: Int)(body: Audit.Vault[Pay] => A)(implicit fx: Effects): A = {
     var left = balance
     handleSensitive(new SensitiveHandler[Pay, A, A] {
-      def value(a: A): A = a
-      def apply(op: Pay, k: Answer[Audited[Pay]]): Unit = op match {
+      def ret(a: A): A = a
+      def answer(op: Pay, k: Answer[Audited[Pay]]): Unit = op match {
         case t: Transfer => left -= t.amount; k(t, s"ok:${t.to}:${t.amount}")
         case b: Balance => k(b, left)
       }
@@ -30,7 +30,7 @@ object Pay {
   /** The audit of payments: normalized, told masked, refused over the limit. */
   def guarded(limit: Int)(implicit trail: Effect[Trail], fail: Effect[Fail[String]]): Interceptor[Pay, Audited[Pay]] =
     new Interceptor[Pay, Audited[Pay]] {
-      def apply(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
+      def on(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
         case t: Transfer =>
           val to = t.to.trim.toUpperCase
           if (t.amount > limit) {
@@ -50,7 +50,7 @@ object Pay {
     }
 
   val passing: Interceptor[Pay, Audited[Pay]] = new Interceptor[Pay, Audited[Pay]] {
-    def apply(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
+    def on(op: Pay, pass: Pass[Audited[Pay]], k: Answer[Audited[Pay]]): Unit = op match {
       case t: Transfer => k(t, pass(t))
       case b: Balance => k(b, pass(b))
     }
@@ -75,7 +75,7 @@ abstract class ControlTck {
     val result = Trail.keep { implicit trail =>
       State.run(1) { implicit state =>
         intercept(new Interceptor[State[Int], State[Int]] {
-          def apply(op: State[Int], pass: Pass[State[Int]], k: Answer[State[Int]]): Unit = op match {
+          def on(op: State[Int], pass: Pass[State[Int]], k: Answer[State[Int]]): Unit = op match {
             case get: State.Get[Int] => k(get, pass(get))
             case put: State.Put[Int] => Trail.record(s"put ${put.value}"); k(put, pass(State.Put(put.value * 2)))
           }

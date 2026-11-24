@@ -78,8 +78,8 @@ trait Reflect[M[_]] {
 
 object Delimited {
   private def handler[R]: Handler[Reset[R], R, R] = new Handler[Reset[R], R, R] {
-    def value(r: R): R = r
-    def apply(op: Reset[R], k: Resume[Reset[R], R]): R = op match {
+    def ret(r: R): R = r
+    def on(op: Reset[R], k: Resume[Reset[R], R]): R = op match {
       case shift: Reset.Shift0[R, a] => shift.body((x: a) => k(shift, x))
     }
   }
@@ -94,8 +94,8 @@ object Delimited {
   /** The body delimited, its `k`s multi-shot. */
   def resetMulti[R](body: Prompt[R] => R)(implicit fx: MultiEffects): R =
     handle(new MultiHandler[Reset[R], R, R] {
-      def value(r: R): R = r
-      def apply(op: Reset[R], k: Resume[Reset[R], R]): R = handler[R](op, k)
+      def ret(r: R): R = r
+      def on(op: Reset[R], k: Resume[Reset[R], R]): R = handler[R].on(op, k)
     })((effect: Effect[Reset[R]]) => body(new Prompt(effect)))
 
   /** The monadic value reflected: the value it binds, the rest up to the reify bound to it. */

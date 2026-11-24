@@ -17,7 +17,7 @@ final class Intercepted<C, F> implements Effect<F> {
     public <X> X perform(Op<F, X, ?> op) {
         if (closed) throw new IllegalStateException("performed outside its audit: " + op);
         var k = new Given(op);
-        interceptor.operation((C) op, outer::perform, k);
+        interceptor.on((C) op, outer::perform, k);
         if (!k.given) throw new IllegalStateException("the interceptor did not answer " + op);
         return (X) k.value;
     }

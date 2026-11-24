@@ -7,7 +7,7 @@ import okay.direct.Effect;
 import okay.effect.Op;
 import okay.direct.Fx;
 import okay.direct.Effects;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.Program;
 
 /** An environment of type E, read. */
@@ -19,14 +19,14 @@ public sealed interface Reader<E> {
     }
 
     static <E, A, T extends Exception> A run(Effects effects, E env, Body<Reader<E>, A, T> body) throws T {
-        return effects.handle(new TailHandler<Reader<E>, A, A>() {
+        return effects.handle(new InPlace<Reader<E>, A, A>() {
             @Override
-            public A value(A value) {
+            public A ret(A value) {
                 return value;
             }
 
             @Override
-            public void operation(Reader<E> op, Answer<Reader<E>> k) {
+            public void answer(Reader<E> op, Answer<Reader<E>> k) {
                 switch (op) {
                     case Ask<E> ask -> k.answer(ask, env);
                 }

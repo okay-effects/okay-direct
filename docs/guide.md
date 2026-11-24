@@ -73,13 +73,13 @@ to the handler, which answers. A handler is an exhaustive `switch` over the effe
 WITNESS of its answer's type, so an answer of the wrong type does not compile (Java has no GADT inference: see
 [Design](design.md#gadts-in-java-the-operation-as-a-witness)).
 
-**`TailHandler<F, A, R>`** answers every operation in place, through `Answer<F>`, and runs in a loop, in constant stack
+**`InPlace<F, A, B>`** answers every operation in place, through `Answer<F>`, and runs in a loop, in constant stack
 — on Loom, its clause called right at the `perform`, no continuation switched (a few nanoseconds an operation; one in 256 yields, to keep the stack small):
 
 ```java
-fx.handle(new TailHandler<Reader<E>, A, A>() {
-    public A value(A value) { return value; }
-    public void operation(Reader<E> op, Answer<Reader<E>> k) {
+fx.handle(new InPlace<Reader<E>, A, A>() {
+    public A ret(A value) { return value; }
+    public void answer(Reader<E> op, Answer<Reader<E>> k) {
         switch (op) {
             case Reader.Ask<E> ask -> k.answer(ask, env);
         }
@@ -87,14 +87,14 @@ fx.handle(new TailHandler<Reader<E>, A, A>() {
 }, body);
 ```
 
-**`StatefulHandler<F, S, A, R>`** is the same with a state the implementation keeps: each operation gets the state of its
+**`StatefulHandler<F, S, A, B>`** is the same with a state the implementation keeps: each operation gets the state of its
 time and returns the state to go on with. Under a multi-shot handler further out, each resumption has its own (see
 below); `State` and `Trail` are written so:
 
 ```java
 fx.handle(new StatefulHandler<State<S>, S, A, Final<S, A>>() {
-    public Final<S, A> value(S state, A value) { return new Final<>(state, value); }
-    public S operation(S state, State<S> op, Answer<State<S>> k) {
+    public Final<S, A> ret(S state, A value) { return new Final<>(state, value); }
+    public S answer(S state, State<S> op, Answer<State<S>> k) {
         return switch (op) {
             case Get<S> get -> { k.answer(get, state); yield state; }
             case Put<S> put -> { k.answer(put, null); yield put.value(); }
@@ -103,14 +103,14 @@ fx.handle(new StatefulHandler<State<S>, S, A, Final<S, A>>() {
 }, initial, body);
 ```
 
-**`Handler<F, A, R, E>`** is the general one: an operation with `k`, the rest of the body up to the handler, a
+**`Handler<F, A, B, E>`** is the general one: an operation with `k`, the rest of the body up to the handler, a
 `Resume`. `k.resume(op, answer)` runs the rest — still under this handler (a deep handler) — and returns what the
 handler returns for it; the clause may wrap it, or not resume at all:
 
 ```java
 fx.handle(new Handler<Fail<E>, A, Outcome<E, A>, T>() {
-    public Outcome<E, A> value(A value) { return new Success<>(value); }
-    public Outcome<E, A> operation(Fail<E> op, Resume<Fail<E>, Outcome<E, A>, T> k) {
+    public Outcome<E, A> ret(A value) { return new Success<>(value); }
+    public Outcome<E, A> on(Fail<E> op, Resume<Fail<E>, Outcome<E, A>, T> k) {
         return switch (op) {
             case Raise<E, ?> raise -> new Failure<>(raise.error());     // k not resumed: the rest dropped
         };
@@ -118,14 +118,14 @@ fx.handle(new Handler<Fail<E>, A, Outcome<E, A>, T>() {
 }, body);
 ```
 
-**`MultiHandler<F, A, R, E>`** is the general one whose `k` is a `MultiResume`, resumed any number of times
+**`MultiHandler<F, A, B, E>`** is the general one whose `k` is a `MultiResume`, resumed any number of times
 ([below](#one-shot-and-multi-shot)).
 
 A handler's clauses run OUTSIDE its body: an operation a clause performs goes to the handlers further out, never to
 its own handler — a clause performing its own effect is refused.
 
 The general handler's `resume` nests the stack once per resumption, as a deep handler must; a body performing
-hundreds of thousands of operations wants a `TailHandler` or a `StatefulHandler`.
+hundreds of thousands of operations wants an `InPlace` or a `StatefulHandler`.
 
 ## One-shot and multi-shot
 
@@ -133,8 +133,8 @@ How many times a continuation may be resumed is a TYPE:
 
 | | resumed | given to | run by |
 |---|---|---|---|
-| `Resume<F, R, E>` | at most once; a second time throws `IllegalStateException` | `Handler` | every `Effects` |
-| `MultiResume<F, R, E>` | any number of times | `MultiHandler` | a `MultiEffects` only |
+| `Resume<F, B, E>` | at most once; a second time throws `IllegalStateException` | `Handler` | every `Effects` |
+| `MultiResume<F, B, E>` | any number of times | `MultiHandler` | a `MultiEffects` only |
 
 `LoomEffects` and `ThreadEffects` are one-shot `Effects`; `EspressoEffects` is a `MultiEffects`. A multi-shot handler
 does not compile against a one-shot implementation:

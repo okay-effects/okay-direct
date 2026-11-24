@@ -11,10 +11,10 @@ public final class Audit {
     private Audit() {}
 
     /** A handler of the sensitive effect C: answers each operation in place, the operation the witness. */
-    public interface Handler<C, A, R> {
-        R value(A value);
+    public interface Handler<C, A, B> {
+        B ret(A value);
 
-        void operation(C op, Answer<Audited<C>> k);
+        void answer(C op, Answer<Audited<C>> k);
     }
 
     /** The handler of a sensitive effect, as it is given to its body: only {@link #audit} performs through it. */
@@ -33,18 +33,18 @@ public final class Audit {
     }
 
     /** The sensitive effect C handled by {@code handler}; the body gets its vault. */
-    public static <C, A, R, E extends Exception> R handle(Effects effects, Handler<C, A, R> handler,
+    public static <C, A, B, E extends Exception> B handle(Effects effects, Handler<C, A, B> handler,
             VaultBody<C, A, E> body) throws E {
-        return effects.handle(new TailHandler<Audited<C>, A, R>() {
+        return effects.handle(new InPlace<Audited<C>, A, B>() {
             @Override
-            public R value(A value) {
-                return handler.value(value);
+            public B ret(A value) {
+                return handler.ret(value);
             }
 
             @Override
             @SuppressWarnings("unchecked") // an operation of Audited<C> is one of the cases C (see Audited)
-            public void operation(Audited<C> op, Answer<Audited<C>> k) {
-                handler.operation((C) (Object) op, k);
+            public void answer(Audited<C> op, Answer<Audited<C>> k) {
+                handler.answer((C) (Object) op, k);
             }
         }, (Effect<Audited<C>> effect) -> body.run(new Vault<>(effect)));
     }

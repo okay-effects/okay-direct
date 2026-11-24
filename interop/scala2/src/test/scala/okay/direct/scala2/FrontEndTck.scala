@@ -58,8 +58,8 @@ abstract class FrontEndTck {
 
   @Test def aGeneralHandlerResumesAndWrapsTheRest(): Unit = {
     val result = handle(new Handler[Reader[Int], Int, String] {
-      def value(a: Int): String = s"value $a"
-      def apply(op: Reader[Int], k: Resume[Reader[Int], String]): String = op match {
+      def ret(a: Int): String = s"value $a"
+      def on(op: Reader[Int], k: Resume[Reader[Int], String]): String = op match {
         case ask: Reader.Ask[Int] => s"[${k(ask, 20)}]"
       }
     }) { implicit r => Reader.ask[Int] + Reader.ask[Int] }
@@ -80,8 +80,8 @@ abstract class FrontEndTck {
   @Test def continuationsAreOneShot(): Unit = {
     assertThrows(classOf[IllegalStateException], () =>
       handle(new Handler[Reader[Boolean], Boolean, Boolean] {
-        def value(a: Boolean): Boolean = a
-        def apply(op: Reader[Boolean], k: Resume[Reader[Boolean], Boolean]): Boolean = op match {
+        def ret(a: Boolean): Boolean = a
+        def on(op: Reader[Boolean], k: Resume[Reader[Boolean], Boolean]): Boolean = op match {
           case ask: Reader.Ask[Boolean] => k(ask, true) && k(ask, false)
         }
       }) { implicit r => Reader.ask[Boolean] }
@@ -127,7 +127,7 @@ abstract class FrontEndTck {
     assertEquals((11, Some(21)), result)
   }
 
-  @Test def aTailHandlerRunsInConstantStack(): Unit = {
+  @Test def anInPlaceHandlerRunsInConstantStack(): Unit = {
     val result = State.run(0) { implicit s =>
       for (_ <- 1 to 100000) State.put(State.get[Int] + 1)
       "done"

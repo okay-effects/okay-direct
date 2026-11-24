@@ -6,30 +6,30 @@ package okay.direct;
  * body throws, {@code handle} throws on. Programs are written against this interface and the capabilities, and run
  * on any implementation.
  *
- * <p>Every implementation runs one-shot handlers: {@link Handler}, {@link TailHandler}. One whose continuations
+ * <p>Every implementation runs one-shot handlers: {@link Handler}, {@link InPlace}. One whose continuations
  * are multi-shot is a {@link MultiEffects}, and runs {@link MultiHandler}s too: which handler runs where is a type.
  *
  * <p>A program runs on one implementation: handlers of different implementations do not nest.
  */
 public interface Effects {
-    <F, A, R, E extends Exception> R handle(Handler<F, A, R, E> handler, Body<F, A, E> body) throws E;
+    <F, A, B, E extends Exception> B handle(Handler<F, A, B, E> handler, Body<F, A, E> body) throws E;
 
-    <F, A, R, E extends Exception> R handle(TailHandler<F, A, R> handler, Body<F, A, E> body) throws E;
+    <F, A, B, E extends Exception> B handle(InPlace<F, A, B> handler, Body<F, A, E> body) throws E;
 
     /** F handled with a state from {@code initial}. One-shot implementations keep it in the handler's loop. */
-    default <F, S, A, R, E extends Exception> R handle(StatefulHandler<F, S, A, R> handler, S initial,
+    default <F, S, A, B, E extends Exception> B handle(StatefulHandler<F, S, A, B> handler, S initial,
             Body<F, A, E> body) throws E {
-        return handle(new TailHandler<F, A, R>() {
+        return handle(new InPlace<F, A, B>() {
             private S state = initial;
 
             @Override
-            public R value(A value) {
-                return handler.value(state, value);
+            public B ret(A value) {
+                return handler.ret(state, value);
             }
 
             @Override
-            public void operation(F op, Answer<F> k) {
-                state = handler.operation(state, op, k);
+            public void answer(F op, Answer<F> k) {
+                state = handler.answer(state, op, k);
             }
         }, body);
     }

@@ -15,7 +15,7 @@ import okay.direct.Answer;
 import okay.direct.Effect;
 import okay.direct.Effects;
 import okay.direct.Interceptor;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.std.Fail;
 import okay.direct.std.State;
 import org.junit.jupiter.api.Test;
@@ -64,7 +64,7 @@ abstract class TracingTests {
             Effect<State<Integer>> guarded = Interceptor.intercept(state,
                 new Interceptor<State<Integer>, State<Integer>>() {
                     @Override
-                    public void operation(State<Integer> op, Pass<State<Integer>> pass, Answer<State<Integer>> k) {
+                    public void on(State<Integer> op, Pass<State<Integer>> pass, Answer<State<Integer>> k) {
                         switch (op) {
                             case State.Get<Integer> get -> k.answer(get, pass.pass(get));
                             case State.Put<Integer> put -> {
@@ -87,14 +87,14 @@ abstract class TracingTests {
     @Test
     void anOperationWhoseHandlerFailedEndsAbandoned() {
         var fx = Tracing.traced(effects(), provider.get("test"));
-        assertThrows(IllegalStateException.class, () -> fx.handle(new TailHandler<Ask, Integer, Integer>() {
+        assertThrows(IllegalStateException.class, () -> fx.handle(new InPlace<Ask, Integer, Integer>() {
             @Override
-            public Integer value(Integer value) {
+            public Integer ret(Integer value) {
                 return value;
             }
 
             @Override
-            public void operation(Ask op, Answer<Ask> k) {
+            public void answer(Ask op, Answer<Ask> k) {
                 throw new IllegalStateException("no answer");
             }
         }, (Effect<Ask> ask) -> ask.perform(new Ask.Question())));

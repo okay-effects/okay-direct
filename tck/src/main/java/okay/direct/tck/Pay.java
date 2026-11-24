@@ -16,12 +16,12 @@ sealed interface Pay {
             private int left = balance;
 
             @Override
-            public A value(A value) {
+            public A ret(A value) {
                 return value;
             }
 
             @Override
-            public void operation(Pay op, Answer<Audited<Pay>> k) {
+            public void answer(Pay op, Answer<Audited<Pay>> k) {
                 switch (op) {
                     case Transfer transfer -> {
                         left -= transfer.amount();

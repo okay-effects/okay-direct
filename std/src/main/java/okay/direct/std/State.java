@@ -30,12 +30,12 @@ public sealed interface State<S> {
     static <S, A, E extends Exception> Final<S, A> run(Effects effects, S initial, Body<State<S>, A, E> body) throws E {
         return effects.handle(new StatefulHandler<State<S>, S, A, Final<S, A>>() {
             @Override
-            public Final<S, A> value(S state, A value) {
+            public Final<S, A> ret(S state, A value) {
                 return new Final<>(state, value);
             }
 
             @Override
-            public S operation(S state, State<S> op, Answer<State<S>> k) {
+            public S answer(S state, State<S> op, Answer<State<S>> k) {
                 return switch (op) {
                     case Get<S> get -> {
                         k.answer(get, state);

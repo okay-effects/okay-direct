@@ -15,7 +15,7 @@ import okay.direct.Effects;
 import okay.direct.Fx;
 import okay.direct.Program;
 import okay.effect.Pure;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.std.Fail;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
@@ -39,14 +39,14 @@ interface RowsTests {
 
     static <R, A> Program<Logged<A>, R> logged(Program<A, Eff<Log, R>> program) {
         var lines = new ArrayList<String>();
-        return Fx.handle(new TailHandler<Log, A, Logged<A>>() {
+        return Fx.handle(new InPlace<Log, A, Logged<A>>() {
             @Override
-            public Logged<A> value(A value) {
+            public Logged<A> ret(A value) {
                 return new Logged<>(List.copyOf(lines), value);
             }
 
             @Override
-            public void operation(Log op, Answer<Log> k) {
+            public void answer(Log op, Answer<Log> k) {
                 switch (op) {
                     case Log.Line line -> {
                         lines.add(line.text());

@@ -146,7 +146,7 @@ wraps every capability its handlers hand out.
 | | Found by | Fixed |
 |---|---|---|
 | a body's handler swallowed the unwinding of an outer handler's dropped rest | the audit's refusal through `Fail`, under a bank | `Abandoned` knows its owner |
-| a tail clause that threw left the body waiting | a refusal from a tail handler | the body unwound |
+| an in-place clause that threw left the body waiting | a refusal from an in-place handler | the body unwound |
 | `Audited` as a class broke on javac's bridge cast | the audit tests | an interface the operations implement |
 | scoped values leaked between a body and its clause on Loom | `Implicit`'s clause test | the bindings switched with the stack |
 | on Espresso, a continuation's bottom frame pointed at the original | the first multi-shot copy | the frames patched to the copy |

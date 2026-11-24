@@ -59,12 +59,12 @@ final class AsyncRun<A> implements Async.Task<A> {
     private void run(Body<Async, A, ? extends Exception> body) {
         effects.start(new DetachedHandler<Async, A, A>() {
             @Override
-            public A value(A value) {
+            public A ret(A value) {
                 return value;
             }
 
             @Override
-            public void operation(Async op, Later<Async> k) {
+            public void on(Async op, Later<Async> k) {
                 if (cancelled) {
                     k.drop();
                     return;

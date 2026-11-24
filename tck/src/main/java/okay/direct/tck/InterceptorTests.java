@@ -14,7 +14,7 @@ import okay.direct.Effect;
 import okay.direct.Effects;
 import okay.direct.Interceptor;
 import okay.direct.Observer;
-import okay.direct.TailHandler;
+import okay.direct.InPlace;
 import okay.direct.std.Fail;
 import okay.direct.std.Reader;
 import okay.direct.std.State;
@@ -105,14 +105,14 @@ interface InterceptorTests {
     @Test
     default void aHandlerOfASensitiveEffectWrittenByHandCannotAnswer() {
         var fx = effects();
-        assertThrows(IllegalArgumentException.class, () -> fx.handle(new TailHandler<Audited<Pay>, String, String>() {
+        assertThrows(IllegalArgumentException.class, () -> fx.handle(new InPlace<Audited<Pay>, String, String>() {
             @Override
-            public String value(String value) {
+            public String ret(String value) {
                 return value;
             }
 
             @Override
-            public void operation(Audited<Pay> op, Answer<Audited<Pay>> k) {
+            public void answer(Audited<Pay> op, Answer<Audited<Pay>> k) {
                 // the operation is an Audited<Pay>: no case, no answer's type; a forged witness is refused
                 k.answer(new Pay.Transfer("forged", 0), "forged");
             }
@@ -203,14 +203,14 @@ interface InterceptorTests {
     default void aTailClauseThatThrowsUnwindsTheBody() {
         var fx = effects();
         var cleaned = new AtomicBoolean();
-        assertThrows(SecurityException.class, () -> fx.handle(new TailHandler<Reader<Integer>, Integer, Integer>() {
+        assertThrows(SecurityException.class, () -> fx.handle(new InPlace<Reader<Integer>, Integer, Integer>() {
             @Override
-            public Integer value(Integer value) {
+            public Integer ret(Integer value) {
                 return value;
             }
 
             @Override
-            public void operation(Reader<Integer> op, Answer<Reader<Integer>> k) {
+            public void answer(Reader<Integer> op, Answer<Reader<Integer>> k) {
                 throw new SecurityException("no");
             }
         }, reader -> {
