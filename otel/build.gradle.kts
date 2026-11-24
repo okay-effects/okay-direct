@@ -1,6 +1,6 @@
 plugins { `java-library` }
 
-// every operation a span of OpenTelemetry: an observer of the api (Observer.watch)
+// every operation a span of OpenTelemetry: an observer of the api (Observer.observe)
 dependencies {
     api(project(":api"))
     api("io.opentelemetry:opentelemetry-api:1.67.0")

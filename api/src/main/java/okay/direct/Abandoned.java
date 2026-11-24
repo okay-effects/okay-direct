@@ -4,7 +4,8 @@ package okay.direct;
  * Thrown at {@code perform} in a body whose rest its handler dropped: the body unwinds, its {@code finally} blocks
  * run, and a {@code perform} of the same handler on the way throws it again. It unwinds through the bodies of
  * handlers nested in the one that dropped the rest, up to that one's body, whose end it is. Not to be caught by
- * programs.
+ * programs. It is the model's {@code unwind} (okay-effects' CONCEPT.md): a rest not resumed is unwound, never
+ * forgotten.
  */
 public final class Abandoned extends Error {
     private final transient Object owner;

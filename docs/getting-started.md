@@ -123,8 +123,8 @@ sbt: `fork := true` and `javaOptions ++= Seq(...)` with the same three. Your cod
 
 A shop's cart: an effect of our own, prices; a program totalling the cart; two handlers that give prices their
 meaning — an external, asynchronous price service, and a sale on top of it; and the `Throws` of the standard effects
-for an item with no price. It is checked against the release 0.1.0, run on a virtual thread: eight quotes, 100 ms each, in
-about 0.85 s.
+for an item with no price. It is written in the names of master (0.1.1-SNAPSHOT; 0.1.0 has older ones), run on a
+virtual thread: eight quotes, 100 ms each, in about 0.85 s.
 
 **The effect and the program.** An effect is a sealed interface, its operations records implementing it and
 `Op<Effect, Answer, Self>` (okay-java-api's `okay.effect.Op`, Self the record itself). The program takes the capabilities it needs:

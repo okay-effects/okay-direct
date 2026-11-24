@@ -128,7 +128,7 @@ unhandled.
 | **TCK** | every implementation passes the same tests (`EffectsTck`, `MultiEffectsTck`, `DetachedEffectsTck`, `RowsTests`) and the types refuse the same programs (`RowTypesTest`) |
 | **Contract** | written: dynamic extent of capabilities, one-shot by default, shots as a type, a dropped rest unwinds, exceptions of bodies and clauses, scoped values across continuations, interrupt and cancellation, never resume under a monitor |
 | **Checking** | `okay-audit`: effects only through capabilities, no live resources in programs, no capability escaping its body |
-| **Interop** | `CompletableFuture` (`DetachedEffects`), streams (`Emits`), transactions (`sql`), tracing (`otel`), cats-effect and ZIO |
+| **Interop** | `CompletableFuture` (`DetachedEffects`), streams (`Emit`), transactions (`sql`), tracing (`otel`), cats-effect and ZIO |
 | **Debugging** | the stack of a direct-style program is the program's; `Observer`/`Trail` record the operations |
 
 What is NOT done, on purpose: a monad-only API (Java programmers would not read it); annotations and AOP
@@ -137,11 +137,14 @@ What is NOT done, on purpose: a monad-only API (Java programmers would not read 
 ## 7. Where it stands, and what is next
 
 - Done (okay-direct 0.1.1-SNAPSHOT): the row (`Fx`, `Program<A, R>`) over the existing API, on every implementation;
-  row forms of `State`, `Reader`, `Throws`, `Choose`; `Throws.catching`/`Throws.rethrow`; TCK and compile-time refusals.
-  The vocabulary is okay-java-api's (`okay.effect.Op<E, X, Self>`, `Eff`, `Pure`), shared with okay-java; the Scala
-  front ends write `Op[F, X]` (an alias, the effect as `Self`).
-- Next, to the family's names (CONCEPT.md §6): `Throws` for `Throws`, `Emit` for `Emits`, `Clock` for `VirtualClock`,
-  `ret`/`on`/`answer` for `value`/`operation`, `observe` for `Observer.watch`, `Sensitive` on the effect for
-  `Audited.Op` on the operation; a handler's result `B`, never `R`. Then one SPI for direct style with okay-java's
-  resumable transform as an implementation, and `reify`/`reflect` between `Program<A, R>` and okay-java's
-  `Comp<A, R>`.
+  row forms of `State`, `Reader`, `Throws`, `Choose`, `Clock`; `Throws.catching`/`Throws.rethrow`; TCK and
+  compile-time refusals. The vocabulary is okay-java-api's (`okay.effect.Op<E, X, Self>`, `Eff`, `Pure`), shared with
+  okay-java; the Scala front ends write `Op[F, X]` (an alias, the effect as `Self`).
+- Done, the family's names (CONCEPT.md §3): handler clauses `ret`, `on(op, k)`, `answer` (in place), the in-place
+  handler `InPlace`; a handler's result `B`, never `R`; `Throws` (`run` to `Ok`/`Err`, `recover`), `Emit` (`send`),
+  `Clock` (`Clock.Virtual` a time its handler answers from); `Observer.observe`; `Sensitive.Op` the mark of a
+  sensitive effect, `Audited` the place `Audit.handle` gives its body. A dropped rest throwing `Abandoned` is the
+  model's `unwind`. The mark is okay-direct's `Sensitive<C>`, not okay-java-api's `okay.effect.Sensitive.Op`: that
+  one is no `okay.effect.Op`, and `perform`, `Answer` and `Pass` take operations by `Op` as the witness of the answer.
+- Next: one SPI for direct style with okay-java's resumable transform as an implementation, and `reify`/`reflect`
+  between `Program<A, R>` and okay-java's `Comp<A, R>`.

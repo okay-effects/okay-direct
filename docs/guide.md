@@ -155,7 +155,8 @@ A clause that does not resume `k` drops the rest of the body. The rest is not le
 the `perform` it is suspended at, the body unwinds — its `finally` blocks run, and an operation of an outer effect in
 one is handled as ever — and the handler returns its clause's value. `Abandoned` knows whose rest it is: it unwinds
 through the bodies of handlers nested inside, up to the body of the handler that dropped it. Programs do not catch
-it. A clause that throws drops the rest in the same way, then its exception goes on.
+it. A clause that throws drops the rest in the same way, then its exception goes on. This is the model's `unwind`
+(okay-effects' CONCEPT.md): the rest is left by unwinding it, never by forgetting it.
 
 ## Exceptions
 

@@ -22,7 +22,8 @@ sbt: `resolvers += "okay-direct" at "https://okay-effects.github.io/okay-direct/
 
 An effect is a sealed interface, its operations records implementing `Op<F, Answer, Self>` (okay-java-api's `okay.effect.Op`, Self the record itself). A program takes the
 capabilities (`Effect<F>`) it needs as parameters; its signature lists what it may do. A handler is an exhaustive
-`switch` answering through `k`, the operation the witness of the answer's type. (Compiled and run against 0.1.0.)
+`switch` answering through `k`, the operation the witness of the answer's type. (Names of master, 0.1.1-SNAPSHOT;
+0.1.0 has the older `TailHandler`, `value`/`operation`, `Fail`, `Emits`, `VirtualClock`, `Audited.Op`, `Observer.watch`.)
 
 ```java
 import okay.direct.*;
@@ -145,8 +146,8 @@ Also: `Interceptor.intercept(effect, interceptor)` for any effect (tell, pass on
   `--experimental-options --java.Continuum=true`); on Loom/threads it does not compile. On Espresso the heap is shared
   between branches: build results from values made after the resumptions, keep per-branch state in a
   `StatefulHandler`. For generators on any JDK use `Emit.stream`.
-- A dropped rest unwinds by throwing `Abandoned` at the `perform`: never catch `Throwable`/`Abandoned` in programs;
-  `finally` blocks do run.
+- A dropped rest unwinds by throwing `Abandoned` at the `perform` (the model's `unwind`): never catch
+  `Throwable`/`Abandoned` in programs; `finally` blocks do run.
 - `Implicit<F>` capabilities are checked at run time (`get` throws `IllegalStateException` when unbound), unlike
   parameters; prefer parameters (Java) or `using` (Scala 3).
 - `Async` (await, `both`/`race`/`timeout`, `Channel`) needs a `DetachedEffects` (Loom or threads); a forked body gets

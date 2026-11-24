@@ -39,7 +39,7 @@ cats-effect and ZIO interop, the [implementations](docs/implementations.md), the
 | `StatefulHandler<F, S, A, B>` | the same with a state kept by the implementation: each resumption's own |
 | `Effects` | an implementation: `handle(handler, body) throws E`, for one-shot handlers |
 | `MultiEffects` | an implementation with multi-shot continuations: `MultiHandler`s too |
-| `Abandoned` | thrown at `perform` when the handler drops the rest: the body unwinds, `finally` runs |
+| `Abandoned` | thrown at `perform` when the handler drops the rest: the body unwinds (the model's `unwind`), `finally` runs |
 | `Later<F>`, `DetachedHandler`, `DetachedEffects` | a continuation that outlives its clause: resumed once, any time, from any thread; `start` gives a `CompletableFuture` |
 | `Implicit<F>` | a key, by `ScopedValue`, under which a capability is found instead of passed |
 | `Interceptor<C, F>` | control of one effect's operations at the `perform`: tell, pass on, change, refuse |
